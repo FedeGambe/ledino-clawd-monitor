@@ -16,7 +16,7 @@ File generati:
                                               "think" = ha il prompt ma nessun tool)
     error_N                                   tool fallito (qualche secondo)
 
-Il corpo resta arancione; ciò che è azzurro/ambra/verde/grigio è il colore
+Il corpo resta arancione; ciò che è arancio vivo/giallo/verde/grigio è il colore
 dello stato. Idee prese da clawd-actor (costumi) e clawd-on-desk (stati),
 ridisegnate da zero.
 """

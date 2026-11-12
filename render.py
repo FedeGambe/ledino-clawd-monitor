@@ -21,8 +21,8 @@ BG = (8, 10, 14)
 FG = (225, 228, 235)
 DIM = (90, 96, 110)
 STATUS_COLOR = {
-    WORKING: (54, 200, 230),   # azzurro
-    WAITING: (255, 176, 32),   # ambra: ti aspetta
+    WORKING: (255, 122, 24),   # arancio
+    WAITING: (255, 228, 0),    # giallo: ti aspetta
     DONE: (80, 220, 110),      # verde: finito
     IDLE: (110, 110, 130),     # grigio: in pausa
 }
@@ -249,7 +249,7 @@ def progress_bar(surf, rect: pygame.Rect, s: Session, t: float, border: bool) ->
     Barra di avanzamento di una sessione:
     - con todo list: riempimento proporzionale (completati/totale);
     - senza todo list e al lavoro: segmento che scorre (indeterminata);
-    - in attesa: barra ambra lampeggiante.
+    - in attesa: barra gialla lampeggiante.
     """
     col = STATUS_COLOR[s.status]
     track = tuple(int(c * 0.18) for c in col)

@@ -46,8 +46,8 @@ Se il monitor è chiuso, gli hook escono in silenzio: Claude Code non ne risente
 
 | Colore | Stato | Quando |
 |---|---|---|
-| azzurro | LAVORA | dopo il tuo prompt e a ogni uso di tool |
-| ambra | ATTENDE | richiesta di permesso (Notification) |
+| arancio | LAVORA | dopo il tuo prompt e a ogni uso di tool |
+| giallo | ATTENDE | richiesta di permesso (Notification) |
 | verde | FINITO | ha terminato la risposta (Stop) |
 | grigio | PAUSA | finito da più di 10 minuti |
 
