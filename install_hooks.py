@@ -22,8 +22,8 @@ MARKER = "hook_relay.py"  # serve a riconoscere i nostri hook
 
 # Eventi da intercettare; i tool-event vogliono un matcher ("*" = tutti i tool)
 EVENTS = ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse",
-          "Notification", "Stop", "SessionEnd"]
-TOOL_EVENTS = {"PreToolUse", "PostToolUse"}
+          "PostToolUseFailure", "Notification", "Stop", "SessionEnd"]
+TOOL_EVENTS = {"PreToolUse", "PostToolUse", "PostToolUseFailure"}
 
 
 def hook_command() -> str:

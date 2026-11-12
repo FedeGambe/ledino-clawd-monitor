@@ -30,6 +30,7 @@ LABELS = {WORKING: "LAVORA", WAITING: "ATTENDE", DONE: "FINITO", IDLE: "PAUSA"}
 
 # --- Timeout -------------------------------------------------------------
 DONE_TO_IDLE_S = 10 * 60      # dopo 10 min "finito" diventa "pausa"
+ERROR_SHOW_S = 4             # durata dell'animazione di errore
 STALE_SESSION_S = 60 * 60     # sessione senza eventi da 1 h: la rimuoviamo
                               # (copre le sessioni chiuse senza SessionEnd)
 
@@ -43,6 +44,7 @@ class Session:
     status: str = IDLE
     tool: str = ""                 # ultimo tool in uso (Edit, Bash, ...)
     message: str = ""              # testo dell'ultima Notification
+    error_until: float = 0.0       # fino a quando mostrare l'errore di un tool
     updated: float = field(default_factory=time.time)
     # Todo list: id del task -> stato ("pending" | "in_progress" | "completed")
     todos: dict = field(default_factory=dict)
@@ -126,6 +128,11 @@ class StateStore:
             elif name == "PostToolUse":
                 s.status = WORKING
                 self._update_todos(s, ev)
+
+            elif name == "PostToolUseFailure":
+                # Tool fallito: la sessione continua, la mascotte fa "errore" per qualche secondo
+                s.status = WORKING
+                s.error_until = time.time() + ERROR_SHOW_S
 
             elif name == "Notification":
                 self._handle_notification(s, ev)

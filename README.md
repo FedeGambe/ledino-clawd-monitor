@@ -54,6 +54,14 @@ Se il monitor è chiuso, gli hook escono in silenzio: Claude Code non ne risente
 La mascotte mostra lo stato più importante tra tutte le sessioni
 (attende > lavora > finito > pausa).
 
+Mascotte (`python make_sprites.py` rigenera `sprites/`):
+- mentre lavora indossa un costume a seconda del tool: nuvoletta che pensa
+  (nessun tool ancora), terminale (Bash), detective (Read/Grep), pittore
+  (Edit/Write), cowboy (Agent), mago (MCP), giocoliere (todo), meteo (Web);
+- un tool fallito la fa scuotere con gli occhi a X per 4 secondi
+  (serve l'hook `PostToolUseFailure`: rilancia `install_hooks.py --apply`);
+- le altre sessioni attive compaiono come mini-mascotte del loro colore di stato (max 3).
+
 **Avanzamento**: deriva dalla todo list interna di Claude Code
 (`TodoWrite` o `TaskCreate`/`TaskUpdate`, a seconda della versione).
 Sulle richieste brevi senza todo list la barra scorre e basta.

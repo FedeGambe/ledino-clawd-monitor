@@ -9,6 +9,7 @@ che vedi è fedele a quello che vedresti sul pannello reale.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pygame
@@ -124,7 +125,7 @@ _FACES = {
     ],
 }
 # Velocità dell'animazione (frame al secondo) per stato
-_FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5}
+_FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5, "error": 6}
 
 
 def _build_frame(state: str, frame: int) -> pygame.Surface:
@@ -169,6 +170,23 @@ def tool_group(tool: str) -> str:
     return TOOL_GROUPS.get(tool, "")
 
 
+# Posti liberi nel 32x32 per le mini-mascotte: in basso a sx, in basso a dx, a sx
+_MINI_SPOTS = [(0, 27), (25, 27), (0, 21)]
+
+
+def _draw_minis(img: pygame.Surface, colors: list, t: float) -> None:
+    """Mini-mascotte 7x4 del colore di stato della sessione, che saltellano sfasate."""
+    for n, (col, (x, y)) in enumerate(zip(colors, _MINI_SPOTS)):
+        y -= int(t * 3 + n) % 2
+        pygame.draw.rect(img, col, (x + 1, y, 5, 3))
+        img.set_at((x, y + 1), col)          # braccia
+        img.set_at((x + 6, y + 1), col)
+        img.set_at((x + 2, y + 1), (24, 22, 22))  # occhi
+        img.set_at((x + 4, y + 1), (24, 22, 22))
+        img.set_at((x + 2, y + 3), col)      # gambe
+        img.set_at((x + 4, y + 3), col)
+
+
 class Mascot:
     """
     Gestisce i frame della mascotte.
@@ -184,24 +202,39 @@ class Mascot:
             custom = self._load_custom(sprite_dir, state) if sprite_dir else []
             self.frames[state] = custom or [_build_frame(state, i) for i in range(2)]
         # Varianti "working-<gruppo>" con l'oggetto del tool in uso (opzionali)
-        for group in set(TOOL_GROUPS.values()) | {"mcp"}:
+        for group in set(TOOL_GROUPS.values()) | {"mcp", "think"}:
             key = f"{WORKING}-{group}"
             custom = self._load_custom(sprite_dir, key) if sprite_dir else []
             if custom:
                 self.frames[key] = custom
+        # Tool fallito (opzionale): sostituisce per qualche secondo la mascotte
+        custom = self._load_custom(sprite_dir, "error") if sprite_dir else []
+        if custom:
+            self.frames["error"] = custom
 
     @staticmethod
     def _load_custom(sprite_dir: Path, state: str) -> list[pygame.Surface]:
         files = sorted(sprite_dir.glob(f"{state}_*.png"))
         return [pygame.image.load(str(f)) for f in files]
 
-    def get(self, state: str, t: float, size: int, tool: str = "") -> pygame.Surface:
-        """Frame corrente, scalato (nearest) a un quadrato di lato `size`."""
-        frames = self.frames[state]
-        if state == WORKING:
-            frames = self.frames.get(f"{WORKING}-{tool_group(tool)}", frames)
-        idx = int(t * _FPS[state]) % len(frames)
-        img = frames[idx]
+    def get(self, state: str, t: float, size: int, tool: str = "",
+            error: bool = False, minis: list = ()) -> pygame.Surface:
+        """
+        Frame corrente, scalato (nearest) a un quadrato di lato `size`.
+        tool: tool in uso ("" = sta pensando), sceglie il costume se esiste.
+        error: un tool è appena fallito. minis: colori delle mini-mascotte
+        (una per ogni altra sessione attiva).
+        """
+        frames, fps = self.frames[state], _FPS[state]
+        if error and "error" in self.frames:
+            frames, fps = self.frames["error"], _FPS["error"]
+        elif state == WORKING:
+            group = tool_group(tool) if tool else "think"
+            frames = self.frames.get(f"{WORKING}-{group}", frames)
+        img = frames[int(t * fps) % len(frames)]
+        if minis and img.get_size() == (32, 32):
+            img = img.copy()
+            _draw_minis(img, minis, t)
         # Mantiene le proporzioni dentro il quadrato
         w, h = img.get_size()
         k = size / max(w, h)
@@ -260,7 +293,12 @@ class Renderer:
     def draw(self, sessions: list[Session], overall: str, t: float) -> pygame.Surface:
         self.surface.fill(BG)
         # Tool mostrato dalla mascotte: quello della prima sessione al lavoro
-        self.tool = next((s.tool for s in sessions if s.status == WORKING and s.tool), "")
+        # ("" = ha ricevuto il prompt ma non usa ancora tool: sta pensando)
+        self.tool = next((s.tool for s in sessions if s.status == WORKING), "")
+        now = time.time()
+        self.error = any(s.error_until > now for s in sessions)
+        # Le altre sessioni attive diventano mini-mascotte (max 3)
+        self.minis = [STATUS_COLOR[s.status] for s in sessions[1:] if s.status != IDLE][:3]
         getattr(self, f"_draw_{self.profile}")(sessions, overall, t)
         return self.surface
 
@@ -277,7 +315,7 @@ class Renderer:
         surf.blit(txt, (314 - txt.get_width(), 6))
 
         # Pannello sinistro: mascotte + stato globale
-        img = self.mascot.get(overall, t, 96, self.tool)
+        img = self.mascot.get(overall, t, 96, self.tool, self.error, self.minis)
         surf.blit(img, (8 + (96 - img.get_width()) // 2, 40))
         label = self.font_l.render(LABELS[overall], True, STATUS_COLOR[overall])
         surf.blit(label, (56 - label.get_width() // 2, 150))
@@ -319,7 +357,7 @@ class Renderer:
     def _draw_led(self, sessions, overall, t):
         surf = self.surface
         # Mascotte 32x32 a sinistra
-        surf.blit(self.mascot.get(overall, t, 32, self.tool), (0, 0))
+        surf.blit(self.mascot.get(overall, t, 32, self.tool, self.error, self.minis), (0, 0))
         if not sessions:
             tiny_text(surf, "ZZ", 42, 13, DIM)
             return
@@ -338,7 +376,7 @@ class Renderer:
     def _draw_pixoo(self, sessions, overall, t):
         surf = self.surface
         # Mascotte 32x32 centrata in alto
-        surf.blit(self.mascot.get(overall, t, 32, self.tool), (16, 1))
+        surf.blit(self.mascot.get(overall, t, 32, self.tool, self.error, self.minis), (16, 1))
         # Etichetta di stato globale + numero sessioni
         label = LABELS[overall]
         tiny_text(surf, label, (64 - tiny_width(label)) // 2, 35, STATUS_COLOR[overall])
