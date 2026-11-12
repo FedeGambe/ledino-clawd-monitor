@@ -170,21 +170,27 @@ def tool_group(tool: str) -> str:
     return TOOL_GROUPS.get(tool, "")
 
 
-# Posti liberi nel 32x32 per le mini-mascotte: in basso a sx, in basso a dx, a sx
-_MINI_SPOTS = [(0, 27), (25, 27), (0, 21)]
+# Mini-mascotte 10x5: stesse proporzioni della grande (corpo largo, braccia
+# in basso, due paia di gambe). # = colore di stato, k = occhi.
+_MINI = [
+    ".########.",
+    ".#k####k#.",
+    ".########.",
+    "##########",
+    ".#.#..#.#.",
+]
+# Posti liberi nel 32x32: in basso a sx, in basso a dx, in alto a sx
+_MINI_SPOTS = [(0, 27), (22, 27), (0, 1)]
 
 
 def _draw_minis(img: pygame.Surface, colors: list, t: float) -> None:
-    """Mini-mascotte 7x4 del colore di stato della sessione, che saltellano sfasate."""
+    """Una mini-mascotte per sessione, del suo colore di stato, che saltellano sfasate."""
     for n, (col, (x, y)) in enumerate(zip(colors, _MINI_SPOTS)):
         y -= int(t * 3 + n) % 2
-        pygame.draw.rect(img, col, (x + 1, y, 5, 3))
-        img.set_at((x, y + 1), col)          # braccia
-        img.set_at((x + 6, y + 1), col)
-        img.set_at((x + 2, y + 1), (24, 22, 22))  # occhi
-        img.set_at((x + 4, y + 1), (24, 22, 22))
-        img.set_at((x + 2, y + 3), col)      # gambe
-        img.set_at((x + 4, y + 3), col)
+        for dy, line in enumerate(_MINI):
+            for dx, ch in enumerate(line):
+                if ch != ".":
+                    img.set_at((x + dx, y + dy), col if ch == "#" else (24, 22, 22))
 
 
 class Mascot:
