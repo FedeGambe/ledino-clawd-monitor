@@ -35,7 +35,8 @@ MASCOT_BODY = (217, 119, 87)       # arancio terracotta
 MASCOT_BODY_IDLE = (160, 98, 80)   # più spento in pausa
 
 # Pausa: una scena diversa ogni PAUSE_SCENE_S secondi, poi dorme
-PAUSE_SCENES = ("coffee", "music", "book", "guitar")
+PAUSE_SCENES = ("coffee", "walk", "music", "book", "walk", "guitar")  # la passeggiata torna due volte
+WALK_SPEED = 8            # passeggiata: pixel del display al secondo
 PAUSE_SCENE_S = 20
 SLEEP_AFTER_S = 40 * 60   # dall'ultimo evento: 10 min "finito" + 30 min di scene
 
@@ -138,7 +139,7 @@ _FACES = {
 }
 # Velocità dell'animazione (frame al secondo) per stato
 _FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5, "error": 6, "wake": 6,
-        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3}
+        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3, "idle-walk": 4}
 
 
 def _build_frame(state: str, frame: int) -> pygame.Surface:
@@ -406,6 +407,20 @@ class Renderer:
         getattr(self, f"_draw_{self.profile}")(sessions, overall, t)
         return self.surface
 
+    def _mascot(self, overall, t, size, left, room, y):
+        """
+        Mascotte e posizione per blit. Ferma è centrata nei `room` pixel liberi
+        a partire da `left`; nella passeggiata va avanti e indietro lì dentro,
+        specchiata quando torna verso sinistra.
+        """
+        img = self.mascot.get(overall, t, size, self.variant, self.minis, self.holiday)
+        if self.variant != f"{IDLE}-walk" or room <= 0:
+            return img, (left + room // 2, y)
+        pos = (time.time() * WALK_SPEED) % (2 * room)
+        if pos >= room:
+            return pygame.transform.flip(img, True, False), (left + int(2 * room - pos), y)
+        return img, (left + int(pos), y)
+
     # ---------------------------------------------------------------- TFT --
     def _draw_tft(self, sessions, overall, t):
         surf = self.surface
@@ -419,8 +434,7 @@ class Renderer:
         surf.blit(txt, (314 - txt.get_width(), 6))
 
         # Pannello sinistro: mascotte + stato globale
-        img = self.mascot.get(overall, t, 96, self.variant, self.minis, self.holiday)
-        surf.blit(img, (8 + (96 - img.get_width()) // 2, 40))
+        surf.blit(*self._mascot(overall, t, 96, left=0, room=16, y=40))
         label = self.font_l.render(LABELS[overall], True, STATUS_COLOR[overall])
         surf.blit(label, (56 - label.get_width() // 2, 150))
         if not sessions:
@@ -461,7 +475,7 @@ class Renderer:
     def _draw_led(self, sessions, overall, t):
         surf = self.surface
         # Mascotte 32x32 a sinistra
-        surf.blit(self.mascot.get(overall, t, 32, self.variant, self.minis, self.holiday), (0, 0))
+        surf.blit(*self._mascot(overall, t, 32, left=0, room=0, y=0))  # nessuno spazio: cammina sul posto
         if not sessions:
             tiny_text(surf, "ZZ", 42, 13, DIM)
             return
@@ -480,7 +494,7 @@ class Renderer:
     def _draw_pixoo(self, sessions, overall, t):
         surf = self.surface
         # Mascotte 32x32 centrata in alto
-        surf.blit(self.mascot.get(overall, t, 32, self.variant, self.minis, self.holiday), (16, 1))
+        surf.blit(*self._mascot(overall, t, 32, left=0, room=32, y=1))
         # Etichetta di stato globale + numero sessioni
         label = LABELS[overall]
         tiny_text(surf, label, (64 - tiny_width(label)) // 2, 35, STATUS_COLOR[overall])

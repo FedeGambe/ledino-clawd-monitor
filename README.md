@@ -63,7 +63,8 @@ Mascotte (`python make_sprites.py` rigenera `sprites/`):
 - le altre sessioni attive compaiono come mini-mascotte del loro colore di stato (max 3).
 - ATTENDE scatta anche quando Claude ti fa una domanda (`AskUserQuestion`) o propone un piano (`ExitPlanMode`);
 - a ogni nuova sessione fa un doppio salto di benvenuto;
-- in PAUSA alterna una scena ogni 20 s (caffè, cuffie, libro, chitarra) e dopo 30 min si addormenta;
+- in PAUSA alterna una scena ogni 20 s (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 min si addormenta;
+  la passeggiata va avanti e indietro su Pixoo e TFT, sul LED 64x32 cammina sul posto;
 - feste automatiche per data (Natale, Capodanno, Halloween, San Valentino): cappello e
   neve/fuochi/fantasmini/cuori. Per provarle: `python monitor.py --festa christmas`
   (`--festa off` le spegne).

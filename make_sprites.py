@@ -363,6 +363,8 @@ def pause_scene(scene, i):
             pygame.draw.line(s, PAL["b"], (15, top + 5), (24, top + 1))
             rect(s, 24, top - 1, 2, 2, PAL["b"])
             stamp(s, NOTE, 26, top - 8 - i % 2, c)
+        elif scene == "walk":  # passeggia verso destra (il monitor lo specchia al ritorno)
+            body(s, color=BODY_IDLE, lift=i % 2, legs=i % 2, eyes="right", mouth="smile")
     return frame(draw)
 
 
