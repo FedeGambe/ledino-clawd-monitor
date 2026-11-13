@@ -9,7 +9,9 @@ che vedi è fedele a quello che vedresti sul pannello reale.
 
 from __future__ import annotations
 
+import os
 import time
+from datetime import date
 from pathlib import Path
 
 import pygame
@@ -26,6 +28,16 @@ STATUS_COLOR = {
     DONE: (80, 220, 110),      # verde: finito
     IDLE: (110, 110, 130),     # grigio: in pausa
 }
+
+# Colori del corpo della mascotte (servono anche per trovare la testa
+# quando si aggiunge il cappello delle feste)
+MASCOT_BODY = (217, 119, 87)       # arancio terracotta
+MASCOT_BODY_IDLE = (160, 98, 80)   # più spento in pausa
+
+# Pausa: una scena diversa ogni PAUSE_SCENE_S secondi, poi dorme
+PAUSE_SCENES = ("coffee", "music", "book", "guitar")
+PAUSE_SCENE_S = 20
+SLEEP_AFTER_S = 40 * 60   # dall'ultimo evento: 10 min "finito" + 30 min di scene
 
 # --- Profili: risoluzione nativa e resa a LED ------------------------------
 PROFILES = {
@@ -125,7 +137,8 @@ _FACES = {
     ],
 }
 # Velocità dell'animazione (frame al secondo) per stato
-_FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5, "error": 6}
+_FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5, "error": 6, "wake": 6,
+        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3}
 
 
 def _build_frame(state: str, frame: int) -> pygame.Surface:
@@ -193,6 +206,86 @@ def _draw_minis(img: pygame.Surface, colors: list, t: float) -> None:
                     img.set_at((x + dx, y + dy), col if ch == "#" else (24, 22, 22))
 
 
+# --- Feste: cappello sulla testa + particelle sullo sfondo ------------------
+# Si attivano da sole in base alla data; CLAUDE_MONITOR_FESTA=<nome>|off forza.
+_HAT_COSTUMES = {"working-read", "working-edit", "working-agent", "working-mcp", "idle-music"}
+_HOLI = {
+    "r": (205, 50, 60), "w": (240, 240, 245), "y": (250, 210, 70), "m": (245, 120, 180),
+    "p": (125, 75, 205), "g": (90, 200, 110),
+}
+_HATS = {  # ultima riga = tesa, appoggiata sulla prima riga del corpo
+    "christmas": ["..........ww", ".......rrrw.", "....rrrrrr..", "..rrrrrrrr..", "wwwwwwwwwwww"],
+    "newyear":   ["......w.....", ".....ym.....", "....ymym....", "...ymymym...", "..ymymymym.."],
+    "halloween": [".....pp.....", "....pppp....", "...pppppp...", "...gggggg...", "pppppppppppp"],
+}
+
+
+def holiday_for(d) -> str:
+    """Festa del giorno (date), "" se nessuna."""
+    md = (d.month, d.day)
+    if (12, 1) <= md <= (12, 30):
+        return "christmas"
+    if md == (12, 31) or md <= (1, 2):
+        return "newyear"
+    if (10, 25) <= md <= (11, 1):
+        return "halloween"
+    if (2, 13) <= md <= (2, 15):
+        return "valentine"
+    return ""
+
+
+def _head_top(img: pygame.Surface) -> int | None:
+    """Prima riga del corpo (testa) nel frame 32x32, cercando il colore del corpo."""
+    for y in range(32):
+        for x in (13, 18):
+            if tuple(img.get_at((x, y)))[:3] in (MASCOT_BODY, MASCOT_BODY_IDLE):
+                return y
+    return None
+
+
+def _draw_holiday(img: pygame.Surface, holiday: str, t: float, hat: bool) -> None:
+    art = _HATS.get(holiday) if hat else None
+    top = _head_top(img) if art else None
+    if top is not None:
+        y0 = top - len(art) + 1
+        # Niente cappello se sopra la testa c'è già un oggetto (fumetto, terminale...)
+        if any(img.get_at((10 + dx, y)).a for y in range(max(0, y0), top) for dx in range(12)):
+            top = None
+
+    def free(x, y):  # le particelle passano dietro la mascotte
+        return 0 <= x < 32 and 0 <= y < 32 and img.get_at((x, y)).a == 0
+
+    for k in range(7):
+        x = (k * 11 + 3) % 32
+        if holiday == "christmas":    # neve che scende
+            y = int(t * 4 + k * 9) % 32
+            if free(x, y):
+                img.set_at((x, y), _HOLI["w"])
+        elif holiday == "valentine":  # cuori che salgono
+            y = 31 - int(t * 3 + k * 9) % 32
+            for dx, dy in ((0, 0), (2, 0), (0, 1), (1, 1), (2, 1), (1, 2)):
+                if free(x + dx, y + dy):
+                    img.set_at((x + dx, y + dy), _HOLI["m"] if k % 2 else _HOLI["r"])
+        elif holiday == "newyear" and k < 3:  # fuochi d'artificio che si aprono
+            cx, cy = ((5, 6), (26, 4), (27, 14))[k]
+            r = (int(t * 4) + k) % 4
+            col = (_HOLI["y"], _HOLI["m"], _HOLI["g"])[k]
+            for dx, dy in ((r, 0), (-r, 0), (0, r), (0, -r), (r, r), (-r, -r), (r, -r), (-r, r)):
+                if r and free(cx + dx, cy + dy):
+                    img.set_at((cx + dx, cy + dy), col)
+        elif holiday == "halloween" and k < 2:  # fantasmini che fluttuano
+            gx, gy = ((2, 8), (26, 3))[k]
+            gy += int(t * 2 + k) % 2
+            for dx, dy in ((1, 0), (0, 1), (1, 1), (2, 1), (0, 2), (2, 2)):
+                if free(gx + dx, gy + dy):
+                    img.set_at((gx + dx, gy + dy), _HOLI["w"])
+    if top is not None:
+        for dy, line in enumerate(art):
+            for dx, ch in enumerate(line):
+                if ch != "." and 0 <= y0 + dy < 32:
+                    img.set_at((10 + dx, y0 + dy), _HOLI[ch])
+
+
 class Mascot:
     """
     Gestisce i frame della mascotte.
@@ -203,44 +296,36 @@ class Mascot:
     """
 
     def __init__(self, sprite_dir: Path | None = None) -> None:
+        # Carica tutti i gruppi <nome>_<n>.png (stati, costumi, scene, ...)
         self.frames: dict[str, list[pygame.Surface]] = {}
+        groups: dict[str, list] = {}
+        for f in sprite_dir.glob("*_*.png") if sprite_dir and sprite_dir.is_dir() else []:
+            name, _, idx = f.stem.rpartition("_")
+            if idx.isdigit():
+                groups.setdefault(name, []).append((int(idx), f))
+        for name, items in groups.items():
+            self.frames[name] = [pygame.image.load(str(f)) for _, f in sorted(items)]
+        # Stati senza sprite: robottino segnaposto
         for state in STATUS_COLOR:
-            custom = self._load_custom(sprite_dir, state) if sprite_dir else []
-            self.frames[state] = custom or [_build_frame(state, i) for i in range(2)]
-        # Varianti "working-<gruppo>" con l'oggetto del tool in uso (opzionali)
-        for group in set(TOOL_GROUPS.values()) | {"mcp", "think"}:
-            key = f"{WORKING}-{group}"
-            custom = self._load_custom(sprite_dir, key) if sprite_dir else []
-            if custom:
-                self.frames[key] = custom
-        # Tool fallito (opzionale): sostituisce per qualche secondo la mascotte
-        custom = self._load_custom(sprite_dir, "error") if sprite_dir else []
-        if custom:
-            self.frames["error"] = custom
+            self.frames.setdefault(state, [_build_frame(state, i) for i in range(2)])
 
-    @staticmethod
-    def _load_custom(sprite_dir: Path, state: str) -> list[pygame.Surface]:
-        files = sorted(sprite_dir.glob(f"{state}_*.png"))
-        return [pygame.image.load(str(f)) for f in files]
-
-    def get(self, state: str, t: float, size: int, tool: str = "",
-            error: bool = False, minis: list = ()) -> pygame.Surface:
+    def get(self, state: str, t: float, size: int, variant: str = "",
+            minis: list = (), holiday: str = "") -> pygame.Surface:
         """
         Frame corrente, scalato (nearest) a un quadrato di lato `size`.
-        tool: tool in uso ("" = sta pensando), sceglie il costume se esiste.
-        error: un tool è appena fallito. minis: colori delle mini-mascotte
-        (una per ogni altra sessione attiva).
+        variant: animazione specifica (costume, errore, scena di pausa...),
+        usata se esiste, altrimenti quella dello stato. minis: colori delle
+        mini-mascotte (altre sessioni). holiday: festa da sovrapporre.
         """
-        frames, fps = self.frames[state], _FPS[state]
-        if error and "error" in self.frames:
-            frames, fps = self.frames["error"], _FPS["error"]
-        elif state == WORKING:
-            group = tool_group(tool) if tool else "think"
-            frames = self.frames.get(f"{WORKING}-{group}", frames)
-        img = frames[int(t * fps) % len(frames)]
-        if minis and img.get_size() == (32, 32):
+        key = variant if variant in self.frames else state
+        frames = self.frames[key]
+        img = frames[int(t * _FPS.get(key, _FPS[state])) % len(frames)]
+        if (minis or holiday) and img.get_size() == (32, 32):
             img = img.copy()
-            _draw_minis(img, minis, t)
+            if holiday:
+                _draw_holiday(img, holiday, t, hat=key not in _HAT_COSTUMES)
+            if minis:
+                _draw_minis(img, minis, t)
         # Mantiene le proporzioni dentro il quadrato
         w, h = img.get_size()
         k = size / max(w, h)
@@ -298,13 +383,26 @@ class Renderer:
 
     def draw(self, sessions: list[Session], overall: str, t: float) -> pygame.Surface:
         self.surface.fill(BG)
-        # Tool mostrato dalla mascotte: quello della prima sessione al lavoro
-        # ("" = ha ricevuto il prompt ma non usa ancora tool: sta pensando)
-        self.tool = next((s.tool for s in sessions if s.status == WORKING), "")
         now = time.time()
-        self.error = any(s.error_until > now for s in sessions)
+        # Tool della prima sessione al lavoro ("" = ha il prompt, sta pensando)
+        tool = next((s.tool for s in sessions if s.status == WORKING), "")
+        # Animazione da mostrare, in ordine di precedenza
+        if any(s.error_until > now for s in sessions):
+            self.variant = "error"
+        elif any(s.wake_until > now for s in sessions):
+            self.variant = "wake"
+        elif overall == WORKING:
+            group = tool_group(tool) if tool else "think"
+            self.variant = f"{WORKING}-{group}" if group else ""
+        elif overall == IDLE and sessions and now - max(s.updated for s in sessions) < SLEEP_AFTER_S:
+            # In pausa da poco: scena a rotazione; poi si addormenta
+            self.variant = f"{IDLE}-{PAUSE_SCENES[int(now // PAUSE_SCENE_S) % len(PAUSE_SCENES)]}"
+        else:
+            self.variant = ""
         # Le altre sessioni attive diventano mini-mascotte (max 3)
         self.minis = [STATUS_COLOR[s.status] for s in sessions[1:] if s.status != IDLE][:3]
+        festa = os.environ.get("CLAUDE_MONITOR_FESTA", "")
+        self.holiday = "" if festa == "off" else festa or holiday_for(date.today())
         getattr(self, f"_draw_{self.profile}")(sessions, overall, t)
         return self.surface
 
@@ -321,7 +419,7 @@ class Renderer:
         surf.blit(txt, (314 - txt.get_width(), 6))
 
         # Pannello sinistro: mascotte + stato globale
-        img = self.mascot.get(overall, t, 96, self.tool, self.error, self.minis)
+        img = self.mascot.get(overall, t, 96, self.variant, self.minis, self.holiday)
         surf.blit(img, (8 + (96 - img.get_width()) // 2, 40))
         label = self.font_l.render(LABELS[overall], True, STATUS_COLOR[overall])
         surf.blit(label, (56 - label.get_width() // 2, 150))
@@ -363,7 +461,7 @@ class Renderer:
     def _draw_led(self, sessions, overall, t):
         surf = self.surface
         # Mascotte 32x32 a sinistra
-        surf.blit(self.mascot.get(overall, t, 32, self.tool, self.error, self.minis), (0, 0))
+        surf.blit(self.mascot.get(overall, t, 32, self.variant, self.minis, self.holiday), (0, 0))
         if not sessions:
             tiny_text(surf, "ZZ", 42, 13, DIM)
             return
@@ -382,7 +480,7 @@ class Renderer:
     def _draw_pixoo(self, sessions, overall, t):
         surf = self.surface
         # Mascotte 32x32 centrata in alto
-        surf.blit(self.mascot.get(overall, t, 32, self.tool, self.error, self.minis), (16, 1))
+        surf.blit(self.mascot.get(overall, t, 32, self.variant, self.minis, self.holiday), (16, 1))
         # Etichetta di stato globale + numero sessioni
         label = LABELS[overall]
         tiny_text(surf, label, (64 - tiny_width(label)) // 2, 35, STATUS_COLOR[overall])

@@ -31,6 +31,10 @@ LABELS = {WORKING: "LAVORA", WAITING: "ATTENDE", DONE: "FINITO", IDLE: "PAUSA"}
 # --- Timeout -------------------------------------------------------------
 DONE_TO_IDLE_S = 10 * 60      # dopo 10 min "finito" diventa "pausa"
 ERROR_SHOW_S = 4             # durata dell'animazione di errore
+WAKE_SHOW_S = 2              # durata del risveglio a inizio sessione
+
+# Tool con cui Claude ti fa una domanda o ti chiede di approvare un piano
+ASK_TOOLS = ("AskUserQuestion", "ExitPlanMode")
 STALE_SESSION_S = 60 * 60     # sessione senza eventi da 1 h: la rimuoviamo
                               # (copre le sessioni chiuse senza SessionEnd)
 
@@ -45,6 +49,7 @@ class Session:
     tool: str = ""                 # ultimo tool in uso (Edit, Bash, ...)
     message: str = ""              # testo dell'ultima Notification
     error_until: float = 0.0       # fino a quando mostrare l'errore di un tool
+    wake_until: float = 0.0        # fino a quando mostrare il risveglio (sessione nuova)
     updated: float = field(default_factory=time.time)
     # Todo list: id del task -> stato ("pending" | "in_progress" | "completed")
     todos: dict = field(default_factory=dict)
@@ -116,14 +121,16 @@ class StateStore:
 
             if name == "SessionStart":
                 s.status = IDLE
+                s.wake_until = time.time() + WAKE_SHOW_S
 
             elif name == "UserPromptSubmit":
                 # Nuova richiesta: Claude inizia a lavorare
                 s.status, s.tool, s.message = WORKING, "", ""
 
             elif name == "PreToolUse":
-                s.status = WORKING
                 s.tool = ev.get("tool_name", "")
+                # Domanda o piano da approvare: anche questo aspetta te
+                s.status = WAITING if s.tool in ASK_TOOLS else WORKING
 
             elif name == "PostToolUse":
                 s.status = WORKING

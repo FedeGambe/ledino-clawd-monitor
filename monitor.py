@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -118,7 +119,11 @@ def main() -> None:
     ap.add_argument("--scale", type=int, help="ingrandimento (default dipende dal profilo)")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--demo", action="store_true", help="genera eventi finti")
+    ap.add_argument("--festa", choices=["christmas", "newyear", "halloween", "valentine", "off"],
+                    help="forza una festa (default: in base alla data)")
     args = ap.parse_args()
+    if args.festa:
+        os.environ["CLAUDE_MONITOR_FESTA"] = args.festa
 
     store = StateStore()
     try:

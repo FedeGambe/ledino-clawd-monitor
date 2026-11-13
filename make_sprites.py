@@ -15,6 +15,8 @@ File generati:
                                               (gruppi: TOOL_GROUPS in render.py;
                                               "think" = ha il prompt ma nessun tool)
     error_N                                   tool fallito (qualche secondo)
+    wake_N                                    sessione appena aperta
+    idle-<scena>_N                            scene a rotazione in pausa
 
 Il corpo resta arancione; ciò che è arancio vivo/giallo/verde/grigio è il colore
 dello stato. Idee prese da clawd-actor (costumi) e clawd-on-desk (stati),
@@ -25,13 +27,14 @@ from pathlib import Path
 
 import pygame
 
-from render import STATUS_COLOR
+from render import MASCOT_BODY as BODY
+from render import MASCOT_BODY_IDLE as BODY_IDLE
+from render import PAUSE_SCENES, STATUS_COLOR
 from state import DONE, IDLE, WAITING, WORKING
 
 OUT = Path(__file__).resolve().parent / "sprites"
 
-BODY = (217, 119, 87)       # arancio terracotta
-BODY_IDLE = (160, 98, 80)   # più spento in pausa
+SHADOW = (58, 50, 54)       # ombra a terra
 EYE = (24, 22, 22)
 MOUTH = (245, 236, 225)
 INK = (24, 22, 22)
@@ -48,7 +51,9 @@ PAL = {
     "y": (250, 210, 70),     # giallo stelle / palline
     "g": (90, 210, 120),     # verde
     "m": (245, 120, 180),    # rosa
-    "c": (225, 230, 240),    # nuvola
+    "c": (225, 230, 240),    # nuvola / bianco
+    "b": (110, 70, 40),      # caffè / dorso del libro
+    "h": (95, 75, 150),      # cuffie
 }
 
 
@@ -74,6 +79,9 @@ def body(surf, lift=0, arms="down", legs=0, eyes="open", mouth="smile",
     """
     y0 = 16 - lift + (2 if sit else 0)
     x0 = 9 + dx
+    # Ombra a terra (non sale col saltello, si stringe quando è in aria)
+    shrink = min(lift, 2)
+    rect(surf, 11 + dx + shrink, 26 if sit else 27, 10 - 2 * shrink, 1, SHADOW)
     rect(surf, x0, y0, 14, 8, color)
     if arms in ("up", "left_up"):
         rect(surf, x0 - 2, y0 - 4, 2, 6, color)
@@ -271,7 +279,7 @@ def done(i):
 
     def draw(s):
         top = body(s, **pose)
-        stamp(s, CHECK, 12, top - 8, c)
+        stamp(s, CHECK, 12, top - 10, c)
         if i == 1:
             stamp(s, SPARK, 3, top - 7, c)
             stamp(s, SPARK, 26, top - 5, c)
@@ -303,6 +311,62 @@ def error(i):
     return frame(draw)
 
 
+def wake(i):
+    """Sessione appena aperta: doppio salto con il punto esclamativo."""
+    pose = [
+        dict(sit=True, eyes="closed", mouth="flat"),
+        dict(lift=4, arms="up", eyes="open", mouth="o"),
+        dict(eyes="open", mouth="smile"),
+        dict(lift=3, arms="up", eyes="happy", mouth="grin"),
+    ][i]
+
+    def draw(s):
+        top = body(s, **pose)
+        if i in (1, 3):
+            stamp(s, ["w", "w", "w", ".", "w"], 16, top - 7, None)
+    return frame(draw)
+
+
+NOTE = ["..##", "..#.", "..#.", "###.", "##.."]
+
+
+def pause_scene(scene, i):
+    """Scene a rotazione in PAUSA (prima di addormentarsi)."""
+    c = STATUS_COLOR[IDLE]
+
+    def draw(s):
+        if scene == "coffee":  # tazza fumante
+            top = body(s, color=BODY_IDLE, eyes="happy" if i >= 2 else "open")
+            stamp(s, ["cbbc.", "cccc#", "cccc#", "cccc."], 25, top + 1, c)
+            s.set_at((26, top - 1 - i % 2), c)
+            s.set_at((27, top - 3 + i % 2), c)
+        elif scene == "music":  # cuffie e note, dondola
+            dx = (-1, 0, 1, 0)[i]
+            top = body(s, color=BODY_IDLE, dx=dx, eyes="closed", mouth="smile")
+            x0 = 9 + dx
+            rect(s, x0 + 1, top - 3, 12, 1, PAL["h"])
+            s.set_at((x0, top - 2), PAL["h"])
+            s.set_at((x0 + 13, top - 2), PAL["h"])
+            rect(s, x0 - 1, top + 1, 2, 3, PAL["h"])
+            rect(s, x0 + 13, top + 1, 2, 3, PAL["h"])
+            stamp(s, NOTE, 25 if i < 2 else 2, top - 9 + i % 2, c)
+        elif scene == "book":  # seduto a leggere
+            top = body(s, color=BODY_IDLE, sit=True, eyes="right", mouth="flat")
+            # Libro rosso tenuto in mano di lato, con il titolo
+            cover = ["rrrrrr", "rwwwwr", "rrrrrr", "rwwwrr", "rrrrrr", "rrrrrr", "rrrrrr"]
+            stamp(s, cover, 24, top, c)
+            if i == 3:  # gira pagina
+                rect(s, 25, top - 1, 4, 1, PAL["c"])
+        elif scene == "guitar":  # strimpella
+            top = body(s, color=BODY_IDLE, lift=i % 2, eyes="happy", mouth="smile")
+            stamp(s, [".ttt.", "ttttt", "ttktt", ".ttt."], 10, top + 4, c)
+            pygame.draw.line(s, PAL["b"], (15, top + 5), (24, top + 1))
+            rect(s, 24, top - 1, 2, 2, PAL["b"])
+            stamp(s, NOTE, 26, top - 8 - i % 2, c)
+    return frame(draw)
+
+
+
 GROUPS = ("bash", "read", "edit", "agent", "mcp", "todo", "web")
 
 FRAMES = {
@@ -312,7 +376,9 @@ FRAMES = {
     DONE: [done(i) for i in range(6)],
     IDLE: [idle(i) for i in range(3)],
     "error": [error(i) for i in range(4)],
+    "wake": [wake(i) for i in range(4)],
 }
+FRAMES.update({f"{IDLE}-{sc}": [pause_scene(sc, i) for i in range(4)] for sc in PAUSE_SCENES})
 FRAMES.update({f"{WORKING}-{g}": [costume(g, i) for i in range(6 if g == "todo" else 4)] for g in GROUPS})
 
 
