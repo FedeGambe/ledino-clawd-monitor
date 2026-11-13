@@ -61,6 +61,7 @@ Mascotte (`python make_sprites.py` rigenera `sprites/`):
 - un tool fallito la fa scuotere con gli occhi a X per 4 secondi
   (serve l'hook `PostToolUseFailure`: rilancia `install_hooks.py --apply`);
 - le altre sessioni attive compaiono come mini-mascotte del loro colore di stato (max 3).
+- in FINITO festeggia per 10 s, poi passeggia con la spunta verde sopra la testa;
 - ATTENDE scatta anche quando Claude ti fa una domanda (`AskUserQuestion`) o propone un piano (`ExitPlanMode`);
 - a ogni nuova sessione fa un doppio salto di benvenuto;
 - in PAUSA alterna una scena ogni 20 s (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 min si addormenta;

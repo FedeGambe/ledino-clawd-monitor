@@ -265,6 +265,17 @@ def waiting(i):
     return frame(draw)
 
 
+def done_walk(i, facing):
+    """Finito, dopo aver festeggiato: passeggia con la spunta sopra la testa.
+    Due versioni (destra/sinistra) invece di specchiare, così la spunta resta dritta."""
+    c = STATUS_COLOR[DONE]
+
+    def draw(s):
+        top = body(s, lift=i % 2, legs=i % 2, eyes=facing, mouth="smile")
+        stamp(s, CHECK, 12, top - 10, c)
+    return frame(draw)
+
+
 def done(i):
     """Festeggia, poi si guarda intorno e sbatte le palpebre."""
     c = STATUS_COLOR[DONE]
@@ -379,6 +390,8 @@ FRAMES = {
     IDLE: [idle(i) for i in range(3)],
     "error": [error(i) for i in range(4)],
     "wake": [wake(i) for i in range(4)],
+    f"{DONE}-walk": [done_walk(i, "right") for i in range(4)],
+    f"{DONE}-walk-left": [done_walk(i, "left") for i in range(4)],
 }
 FRAMES.update({f"{IDLE}-{sc}": [pause_scene(sc, i) for i in range(4)] for sc in PAUSE_SCENES})
 FRAMES.update({f"{WORKING}-{g}": [costume(g, i) for i in range(6 if g == "todo" else 4)] for g in GROUPS})

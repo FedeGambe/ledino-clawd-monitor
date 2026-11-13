@@ -37,6 +37,7 @@ MASCOT_BODY_IDLE = (160, 98, 80)   # più spento in pausa
 # Pausa: una scena diversa ogni PAUSE_SCENE_S secondi, poi dorme
 PAUSE_SCENES = ("coffee", "walk", "music", "book", "walk", "guitar")  # la passeggiata torna due volte
 WALK_SPEED = 8            # passeggiata: pixel del display al secondo
+DONE_CELEBRATE_S = 10     # FINITO: festeggia per 10 s, poi passeggia
 PAUSE_SCENE_S = 20
 SLEEP_AFTER_S = 40 * 60   # dall'ultimo evento: 10 min "finito" + 30 min di scene
 
@@ -139,7 +140,7 @@ _FACES = {
 }
 # Velocità dell'animazione (frame al secondo) per stato
 _FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5, "error": 6, "wake": 6,
-        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3, "idle-walk": 4}
+        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3, "idle-walk": 4, "done-walk": 4, "done-walk-left": 4}
 
 
 def _build_frame(state: str, frame: int) -> pygame.Surface:
@@ -395,6 +396,10 @@ class Renderer:
         elif overall == WORKING:
             group = tool_group(tool) if tool else "think"
             self.variant = f"{WORKING}-{group}" if group else ""
+        elif overall == DONE:
+            # Festeggia appena finito, poi passeggia con la spunta
+            last = max(s.updated for s in sessions if s.status == DONE)
+            self.variant = f"{DONE}-walk" if now - last > DONE_CELEBRATE_S else ""
         elif overall == IDLE and sessions and now - max(s.updated for s in sessions) < SLEEP_AFTER_S:
             # In pausa da poco: scena a rotazione; poi si addormenta
             self.variant = f"{IDLE}-{PAUSE_SCENES[int(now // PAUSE_SCENE_S) % len(PAUSE_SCENES)]}"
@@ -414,12 +419,18 @@ class Renderer:
         specchiata quando torna verso sinistra.
         """
         img = self.mascot.get(overall, t, size, self.variant, self.minis, self.holiday)
-        if self.variant != f"{IDLE}-walk" or room <= 0:
+        if not self.variant.endswith("-walk") or room <= 0:
             return img, (left + room // 2, y)
         pos = (time.time() * WALK_SPEED) % (2 * room)
-        if pos >= room:
-            return pygame.transform.flip(img, True, False), (left + int(2 * room - pos), y)
-        return img, (left + int(pos), y)
+        if pos < room:
+            return img, (left + int(pos), y)
+        # Ritorno verso sinistra: frame "-left" se esistono, altrimenti specchio
+        back = f"{self.variant}-left"
+        if back in self.mascot.frames:
+            img = self.mascot.get(overall, t, size, back, self.minis, self.holiday)
+        else:
+            img = pygame.transform.flip(img, True, False)
+        return img, (left + int(2 * room - pos), y)
 
     # ---------------------------------------------------------------- TFT --
     def _draw_tft(self, sessions, overall, t):
