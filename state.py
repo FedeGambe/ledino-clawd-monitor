@@ -94,6 +94,9 @@ class StateStore:
     def __init__(self) -> None:
         self._sessions: dict[str, Session] = {}
         self._lock = threading.Lock()
+        # Limiti d'uso dell'account (dal mod led-monitor-limits), es.
+        # [{"kind": "five_hour", "percentUsed": 23.5, "resetsAt": "2026-..."}]
+        self.limits: list[dict] = []
 
     # ------------------------------------------------------------------
     # Ingresso eventi
@@ -101,6 +104,10 @@ class StateStore:
     def apply(self, ev: dict) -> None:
         """Aggiorna lo stato in base a un evento hook di Claude Code."""
         name = ev.get("hook_event_name", "")
+        if name == "RateLimits":
+            # Valgono per tutto l'account: l'ultima lettura vince
+            self.limits = list(ev.get("rate_limits") or [])
+            return
         sid = ev.get("session_id")
         if not sid:
             return
@@ -228,6 +235,7 @@ class StateStore:
                 }
                 for s in sessions
             ],
+            "limits": self.limits,
         }
 
 

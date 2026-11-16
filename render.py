@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pygame
@@ -67,6 +67,7 @@ _GLYPHS = {
     "4": "#.#|#.#|###|..#|..#", "5": "###|#..|##.|..#|##.", "6": ".##|#..|###|#.#|###",
     "7": "###|..#|.#.|.#.|.#.", "8": "###|#.#|###|#.#|###", "9": "###|#.#|###|..#|##.",
     "+": "...|.#.|###|.#.|...", "/": "..#|..#|.#.|#..|#..", "-": "...|...|###|...|...",
+    "%": "#.#|..#|.#.|#..|#.#", ":": "...|.#.|...|.#.|...",
     "?": "##.|..#|.#.|...|.#.", ".": "...|...|...|...|.#.", " ": "...|...|...|...|...",
 }
 
@@ -367,6 +368,57 @@ def progress_bar(surf, rect: pygame.Rect, s: Session, t: float, border: bool) ->
 
 
 # ===========================================================================
+# Limiti d'uso (sessione 5h, settimana)
+# ===========================================================================
+LIMIT_LABELS = {"five_hour": "5h", "seven_day": "7g"}
+LIMIT_WINDOW_S = {"five_hour": 5 * 3600, "seven_day": 7 * 86400}
+
+
+def limit_rows(limits: list[dict]) -> list[tuple[str, float, str, float | None]]:
+    """
+    (etichetta, % usata, ora di reset "HH:MM" o "gg/mm", % di finestra trascorsa)
+    per 5h e 7g. La % trascorsa è il "ritmo giusto": usare più di così = consumi tanto.
+    """
+    now = datetime.now().astimezone()
+    rows = []
+    for kind, label in LIMIT_LABELS.items():
+        lim = next((l for l in limits if l.get("kind") == kind), None)
+        if lim is None:
+            continue
+        pct, reset, elapsed = float(lim.get("percentUsed", 0)), "", None
+        try:
+            at = datetime.fromisoformat(lim["resetsAt"]).astimezone()
+            if at <= now:
+                pct = 0.0  # finestra già ripartita, il dato è vecchio
+            else:
+                left = (at - now).total_seconds() / LIMIT_WINDOW_S[kind]
+                elapsed = min(100.0, max(0.0, (1 - left) * 100))
+            reset = at.strftime("%H:%M" if at - now < timedelta(days=1) else "%d/%m")
+        except (KeyError, TypeError, ValueError):
+            pass
+        rows.append((label, pct, reset, elapsed))
+    return rows
+
+
+def limit_color(pct: float, elapsed: float | None = None):
+    """Con il tempo trascorso: verde se in linea, giallo un po' sopra, rosso molto sopra."""
+    over = pct - elapsed if elapsed is not None else pct - 50
+    return (80, 220, 110) if over <= 0 else (255, 228, 0) if over <= 15 else (240, 70, 60)
+
+
+def limit_bar(surf, rect: pygame.Rect, pct: float, elapsed: float | None = None) -> None:
+    """Barra di consumo con una tacca bianca dove "dovresti" essere col tempo trascorso."""
+    col = limit_color(pct, elapsed)
+    pygame.draw.rect(surf, tuple(int(c * 0.18) for c in col), rect)
+    w = round(rect.width * min(pct, 100) / 100)
+    if w:
+        pygame.draw.rect(surf, col, (rect.x, rect.y, w, rect.height))
+    if elapsed is not None:
+        x = rect.x + min(rect.width - 1, round(rect.width * elapsed / 100))
+        pygame.draw.line(surf, FG, (x, rect.y - (rect.height > 1)), (x, rect.bottom - 1 + (rect.height > 1)))
+
+
+# ===========================================================================
 # Profili
 # ===========================================================================
 class Renderer:
@@ -383,8 +435,9 @@ class Renderer:
             self.font_m = pygame.font.Font(None, 18)
             self.font_l = pygame.font.Font(None, 22)
 
-    def draw(self, sessions: list[Session], overall: str, t: float) -> pygame.Surface:
+    def draw(self, sessions: list[Session], overall: str, t: float, limits=()) -> pygame.Surface:
         self.surface.fill(BG)
+        self.limits = limit_rows(list(limits))
         now = time.time()
         # Tool della prima sessione al lavoro ("" = ha il prompt, sta pensando)
         tool = next((s.tool for s in sessions if s.status == WORKING), "")
@@ -432,6 +485,11 @@ class Renderer:
             img = pygame.transform.flip(img, True, False)
         return img, (left + int(2 * room - pos), y)
 
+    def _limit_strip(self, x: int, y: int, w: int) -> None:
+        """Display piccoli: una barretta da 1 px per limite, 5h poi 7g, affiancate."""
+        for i, (_, pct, _, elapsed) in enumerate(self.limits):
+            limit_bar(self.surface, pygame.Rect(x + i * (w + 1), y, w, 1), pct, elapsed)
+
     # ---------------------------------------------------------------- TFT --
     def _draw_tft(self, sessions, overall, t):
         surf = self.surface
@@ -451,6 +509,14 @@ class Renderer:
         if not sessions:
             msg = self.font_s.render("nessuna sessione", True, DIM)
             surf.blit(msg, (56 - msg.get_width() // 2, 172))
+        # In fondo a sinistra: limiti sessione (5h) e settimana (7g)
+        for i, (label, pct, reset, elapsed) in enumerate(self.limits):
+            y = 192 + i * 22
+            surf.blit(self.font_s.render(f"{label} {pct:.0f}%", True, limit_color(pct, elapsed)), (6, y))
+            if reset:
+                r = self.font_s.render(reset, True, DIM)
+                surf.blit(r, (106 - r.get_width(), y))
+            limit_bar(surf, pygame.Rect(6, y + 11, 100, 5), pct, elapsed)
 
         # Pannello destro: fino a 4 card di sessione
         x0, y, card_h = 116, 26, 52
@@ -489,6 +555,7 @@ class Renderer:
         surf.blit(*self._mascot(overall, t, 32, left=0, room=0, y=0))  # nessuno spazio: cammina sul posto
         if not sessions:
             tiny_text(surf, "ZZ", 42, 13, DIM)
+            self._limit_strip(33, 31, 15)
             return
         # A destra: una riga ogni 8 px (max 4) con sigla + barra
         rows = sessions[:4]
@@ -500,6 +567,7 @@ class Renderer:
             progress_bar(surf, pygame.Rect(46, y + 1, 17, 3), s, t, border=False)
         if len(sessions) > 4:
             tiny_text(surf, f"+{len(sessions) - 3}", 33, 25, DIM)
+        self._limit_strip(33, 31, 15)
 
     # ------------------------------------------------------ Pixoo 64x64 --
     def _draw_pixoo(self, sessions, overall, t):
@@ -509,6 +577,7 @@ class Renderer:
         # Etichetta di stato globale + numero sessioni
         label = LABELS[overall]
         tiny_text(surf, label, (64 - tiny_width(label)) // 2, 35, STATUS_COLOR[overall])
+        self._limit_strip(0, 63, 31)
         if not sessions:
             return
         # Fino a 3 righe di sessione (sigla + barra)

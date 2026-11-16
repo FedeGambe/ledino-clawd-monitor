@@ -107,7 +107,7 @@ class MonitorWindow:
     def frame(self, t: float) -> pygame.Surface:
         """Disegna un frame completo (display + cornice) e lo restituisce."""
         sessions = self.store.snapshot()
-        native = self.renderer.draw(sessions, overall_status(sessions), t)
+        native = self.renderer.draw(sessions, overall_status(sessions), t, self.store.limits)
         self.screen.fill((28, 30, 36))  # cornice
         self.screen.blit(upscale(native, self.scale, self.led_mask), (BEZEL, BEZEL))
         return self.screen

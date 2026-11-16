@@ -70,6 +70,13 @@ Mascotte (`python make_sprites.py` rigenera `sprites/`):
   neve/fuochi/fantasmini/cuori. Per provarle: `python monitor.py --festa christmas`
   (`--festa off` le spegne).
 
+**Limiti d'uso**: in fondo compaiono sessione (5h) e settimana (7g). La tacca bianca
+segna il tempo trascorso della finestra (il "ritmo giusto"): barra verde se sei sotto la tacca,
+gialla fino a 15 punti sopra, rossa oltre (stai consumando troppo in fretta); sul TFT con percentuale e ora di reset, su LED/Pixoo come
+due barrette nell'ultima riga. Gli hook non li ricevono: li invia il mod
+`led-monitor-limits` di Claude Code (evento `session.measure`), come
+`{"hook_event_name": "RateLimits", "rate_limits": [...]}` su `/event`.
+
 **Avanzamento**: deriva dalla todo list interna di Claude Code
 (`TodoWrite` o `TaskCreate`/`TaskUpdate`, a seconda della versione).
 Sulle richieste brevi senza todo list la barra scorre e basta.
