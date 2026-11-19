@@ -1,0 +1,15 @@
+{
+  "name": "led-monitor",
+  "version": "0.2.0",
+  "author": { "name": "Federico Gamberini" },
+  "license": "MIT",
+  "description": "Invia stato delle sessioni, todo, nome sessione e limiti d'uso al Claude Monitor locale",
+  "userConfig": {
+    "monitor_url": {
+      "type": "string",
+      "title": "Indirizzo del monitor",
+      "description": "Dove gira monitor.py (o il pannello vero)",
+      "default": "http://127.0.0.1:8765/event"
+    }
+  }
+}

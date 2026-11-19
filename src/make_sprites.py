@@ -32,7 +32,7 @@ from render import MASCOT_BODY_IDLE as BODY_IDLE
 from render import PAUSE_SCENES, STATUS_COLOR
 from state import DONE, IDLE, WAITING, WORKING
 
-OUT = Path(__file__).resolve().parent / "sprites"
+OUT = Path(__file__).resolve().parent.parent / "sprites"
 
 SHADOW = (58, 50, 54)       # ombra a terra
 EYE = (24, 22, 22)

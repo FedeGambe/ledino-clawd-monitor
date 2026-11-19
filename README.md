@@ -5,42 +5,51 @@ Mostra in una finestra cosa stanno facendo le sessioni di Claude Code
 e l'avanzamento della todo list. Emula tre display: TFT 320×240,
 matrice LED 64×32, Pixoo 64×64.
 
-## File
+## Cartella
 
-| File | Ruolo |
-|---|---|
-| `monitor.py` | finestra pygame + server HTTP locale (porta 8765) |
-| `state.py` | logica: aggrega gli eventi per sessione, calcola l'avanzamento |
-| `render.py` | disegno dei 3 profili e della mascotte segnaposto |
-| `hook_relay.py` | lo script che Claude Code lancia a ogni evento |
-| `install_hooks.py` | aggiunge/rimuove gli hook in `~/.claude/settings.json` |
-| `demo.py` | eventi finti per provare senza Claude Code |
-
-## 1. Prova senza Claude Code
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python monitor.py --demo
 ```
+.claude-plugin/    plugin.json + marketplace.json: il mod per Claude Code
+hooks/register.ts  il mod: inoltra eventi, nome sessione, limiti d'uso, comandi in background
+avvia.bat          avvio rapido su Windows (crea il venv la prima volta)
+avvia.sh           avvio rapido su macOS / Linux
+ANIMAZIONI.md      repo da cui vengono le idee per le animazioni
+requirements.txt
+sprites/           PNG della mascotte (generati)
+src/
+  monitor.py       finestra pygame + server HTTP locale (porta 8765)
+  state.py         logica: aggrega gli eventi per sessione, calcola l'avanzamento
+  render.py        disegno dei 3 profili e della mascotte
+  demo.py          eventi finti per provare senza Claude Code
+  make_sprites.py  rigenera sprites/
+```
+
+## Installazione (Windows, macOS, Linux)
+
+1. **Monitor**: clona il repo e avvia `avvia.bat` (Windows) o `./avvia.sh` (macOS/Linux).
+   La prima volta crea il venv e installa le dipendenze. Serve Python 3.10+.
+2. **Mod per Claude Code**: nel prompt di Claude Code scrivi
+
+   ```
+   /plugin install led-monitor --marketplace <owner>/<repo>
+   ```
+
+   rispondi `y` per aggiungere il marketplace e scegli lo scope utente.
+   Vale per la sessione in corso e per tutte le successive.
+
+Nessun percorso da configurare e niente da toccare in `settings.json`.
+Se il monitor gira su un altro PC (o sul pannello vero), cambia l'opzione
+`monitor_url` del mod da `/config` (default `http://127.0.0.1:8765/event`).
+Se il monitor è chiuso, il mod non fa nulla: Claude Code non ne risente.
+
+Per provare il mod da una copia locale senza installarlo:
+`claude --plugin-dir <cartella del repo>`.
+
+## Prova senza Claude Code
+
+`avvia.bat --demo` (o `./avvia.sh --demo`): eventi finti.
+Accetta gli stessi argomenti di `src/monitor.py`.
 
 Tasti: `1` TFT · `2` LED 64×32 · `3` Pixoo · `D` avvia/ferma demo · `ESC` esci.
-
-## 2. Collegarlo a Claude Code
-
-Con il venv attivo (così gli hook usano lo stesso Python):
-
-```powershell
-python install_hooks.py           # anteprima, non modifica nulla
-python install_hooks.py --apply   # scrive settings.json (con backup)
-```
-
-Poi lascia aperto `python monitor.py` e apri **nuove** sessioni di Claude Code:
-gli hook vengono letti all'avvio della sessione. Per toglierli:
-`python install_hooks.py --remove`.
-
-Se il monitor è chiuso, gli hook escono in silenzio: Claude Code non ne risente.
 
 ## Stati
 
@@ -54,12 +63,12 @@ Se il monitor è chiuso, gli hook escono in silenzio: Claude Code non ne risente
 La mascotte mostra lo stato più importante tra tutte le sessioni
 (attende > lavora > finito > pausa).
 
-Mascotte (`python make_sprites.py` rigenera `sprites/`):
+Mascotte (`python src/make_sprites.py` rigenera `sprites/`):
 - mentre lavora indossa un costume a seconda del tool: nuvoletta che pensa
   (nessun tool ancora), terminale (Bash), detective (Read/Grep), pittore
   (Edit/Write), cowboy (Agent), mago (MCP), giocoliere (todo), meteo (Web);
 - un tool fallito la fa scuotere con gli occhi a X per 4 secondi
-  (serve l'hook `PostToolUseFailure`: rilancia `install_hooks.py --apply`);
+  (evento `PostToolUseFailure`);
 - le altre sessioni attive compaiono come mini-mascotte del loro colore di stato (max 3).
 - in FINITO festeggia per 10 s, poi passeggia con la spunta verde sopra la testa;
 - ATTENDE scatta anche quando Claude ti fa una domanda (`AskUserQuestion`) o propone un piano (`ExitPlanMode`);
@@ -67,15 +76,24 @@ Mascotte (`python make_sprites.py` rigenera `sprites/`):
 - in PAUSA alterna una scena ogni 20 s (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 min si addormenta;
   la passeggiata va avanti e indietro su Pixoo e TFT, sul LED 64x32 cammina sul posto;
 - feste automatiche per data (Natale, Capodanno, Halloween, San Valentino): cappello e
-  neve/fuochi/fantasmini/cuori. Per provarle: `python monitor.py --festa christmas`
+  neve/fuochi/fantasmini/cuori. Per provarle: `python src/monitor.py --festa christmas`
   (`--festa off` le spegne).
 
 **Limiti d'uso**: in fondo compaiono sessione (5h) e settimana (7g). La tacca bianca
 segna il tempo trascorso della finestra (il "ritmo giusto"): barra verde se sei sotto la tacca,
 gialla fino a 15 punti sopra, rossa oltre (stai consumando troppo in fretta); sul TFT con percentuale e ora di reset, su LED/Pixoo come
-due barrette nell'ultima riga. Gli hook non li ricevono: li invia il mod
-`led-monitor-limits` di Claude Code (evento `session.measure`), come
+due barrette nell'ultima riga. Li invia il mod (evento `session.measure`), come
 `{"hook_event_name": "RateLimits", "rate_limits": [...]}` su `/event`.
+I limiti sono dell'account, quindi includono anche l'uso in claude.ai, ma si
+aggiornano solo quando Claude Code fa una richiesta. Con una API key (senza
+abbonamento) non ci sono e la riga resta vuota.
+
+**Nome sessione**: sul TFT ogni card mostra `progetto · nome sessione`
+(il titolo automatico o quello di `/rename`), dal prompt successivo.
+
+**Comandi in background**: se Claude ha finito di rispondere ma un comando lanciato in
+background (Bash/PowerShell, anche con ctrl+b) gira ancora, la sessione resta LAVORA con
+il costume terminale finché il comando non termina (evento `Background` con `count`).
 
 **Avanzamento**: deriva dalla todo list interna di Claude Code
 (`TodoWrite` o `TaskCreate`/`TaskUpdate`, a seconda della versione).
@@ -95,8 +113,8 @@ più frame. Se mancano, si usa il robottino segnaposto.
 
 ## Note
 
-- Ogni hook avvia un processo Python (~50–100 ms su Windows) a ogni uso
-  di tool. Se ti sembra pesante, si possono togliere `PreToolUse` e
-  `PostToolUse` per tool diversi dalla todo list (perdi il nome del tool
-  corrente).
+- Il mod gira dentro Claude Code: nessun processo avviato a ogni evento.
+- Aggiornamento da una versione con `hook_relay.py`: togli prima i vecchi hook
+  del monitor da `~/.claude/settings.json` (le voci che contengono `hook_relay.py`),
+  altrimenti ogni evento arriva due volte.
 - Il server ascolta solo su `127.0.0.1`.

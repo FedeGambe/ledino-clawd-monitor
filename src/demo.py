@@ -37,7 +37,7 @@ class DemoFeeder(threading.Thread):
         return not self.stop_event.wait(seconds / self.speed)
 
     def run(self) -> None:
-        # Limiti finti (in produzione arrivano dal mod led-monitor-limits)
+        # Limiti finti (in produzione arrivano dal mod led-monitor)
         soon = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() + 2 * 3600)) + "+00:00"
         later = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() + 4 * 86400)) + "+00:00"
         self.emit({"hook_event_name": "RateLimits", "rate_limits": [

@@ -1,0 +1,6 @@
+{
+  "name": "led-monitor",
+  "owner": { "name": "Federico Gamberini" },
+  "description": "Claude Monitor: mascotte e pannello LED per le sessioni di Claude Code",
+  "plugins": [{ "name": "led-monitor", "source": "./" }]
+}

@@ -1,7 +1,7 @@
 """
 Stato aggregato delle sessioni Claude Code.
 
-Riceve gli eventi JSON inviati dagli hook (via hook_relay.py) e mantiene,
+Riceve gli eventi JSON inviati dal mod led-monitor (hooks/register.ts) e mantiene,
 per ogni sessione, progetto, stato corrente e avanzamento della todo list.
 È indipendente dal display: lo usano sia il simulatore sia (in futuro)
 il codice che pilota il pannello vero.
@@ -50,6 +50,8 @@ class Session:
     message: str = ""              # testo dell'ultima Notification
     error_until: float = 0.0       # fino a quando mostrare l'errore di un tool
     wake_until: float = 0.0        # fino a quando mostrare il risveglio (sessione nuova)
+    background: int = 0            # comandi ancora in background (dal mod led-monitor)
+    title: str = ""                # nome della sessione (/rename o titolo automatico)
     updated: float = field(default_factory=time.time)
     # Todo list: id del task -> stato ("pending" | "in_progress" | "completed")
     todos: dict = field(default_factory=dict)
@@ -94,7 +96,7 @@ class StateStore:
     def __init__(self) -> None:
         self._sessions: dict[str, Session] = {}
         self._lock = threading.Lock()
-        # Limiti d'uso dell'account (dal mod led-monitor-limits), es.
+        # Limiti d'uso dell'account (dal mod led-monitor), es.
         # [{"kind": "five_hour", "percentUsed": 23.5, "resetsAt": "2026-..."}]
         self.limits: list[dict] = []
 
@@ -124,9 +126,14 @@ class StateStore:
                 self._sessions[sid] = s
             elif ev.get("cwd"):
                 s.project = project_name(ev["cwd"])
+            if ev.get("session_title"):
+                s.title = ev["session_title"]
             s.updated = time.time()
 
-            if name == "SessionStart":
+            if name == "Background":
+                s.background = int(ev.get("count") or 0)
+
+            elif name == "SessionStart":
                 s.status = IDLE
                 s.wake_until = time.time() + WAKE_SHOW_S
 
@@ -212,11 +219,16 @@ class StateStore:
         with self._lock:
             for sid, s in list(self._sessions.items()):
                 age = now - s.updated
-                if age > STALE_SESSION_S:
+                if age > STALE_SESSION_S and not s.background:
                     del self._sessions[sid]
                 elif s.status == DONE and age > DONE_TO_IDLE_S:
                     s.status = IDLE
             sessions = [copy.deepcopy(s) for s in self._sessions.values()]
+        for s in sessions:
+            # Ha finito di rispondere ma un comando gira ancora in background:
+            # per il pannello sta ancora lavorando (costume terminale)
+            if s.background and s.status in (DONE, IDLE):
+                s.status, s.tool = WORKING, "background"
         sessions.sort(key=lambda s: (-PRIORITY[s.status], s.project.lower()))
         return sessions
 
@@ -228,6 +240,7 @@ class StateStore:
             "sessions": [
                 {
                     "project": s.project,
+                    "title": s.title,
                     "status": s.status,
                     "tool": s.tool,
                     "done": s.progress[0],

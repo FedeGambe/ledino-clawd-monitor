@@ -171,7 +171,7 @@ def _build_frame(state: str, frame: int) -> pygame.Surface:
 # Tool di Claude Code -> oggetto disegnato sopra la mascotte mentre lavora.
 # I tool non elencati (Skill, ToolSearch, ...) usano i fulmini di default.
 TOOL_GROUPS = {
-    "Bash": "bash", "PowerShell": "bash", "BashOutput": "bash",
+    "Bash": "bash", "PowerShell": "bash", "BashOutput": "bash", "background": "bash",
     "Read": "read", "Grep": "read", "Glob": "read", "LS": "read",
     "Edit": "edit", "MultiEdit": "edit", "Write": "edit", "NotebookEdit": "edit",
     "WebFetch": "web", "WebSearch": "web",
@@ -532,8 +532,10 @@ class Renderer:
         surf, col = self.surface, STATUS_COLOR[s.status]
         pygame.draw.rect(surf, (18, 21, 28), r, border_radius=4)
         pygame.draw.rect(surf, col, (r.x, r.y, 3, r.height))  # bordo colorato
-        # Riga 1: nome progetto (troncato)
-        name = s.project if len(s.project) <= 22 else s.project[:21] + "…"
+        # Riga 1: progetto · nome sessione, troncato alla larghezza della card
+        name = f"{s.project} · {s.title}" if s.title else s.project
+        while len(name) > 1 and self.font_m.size(name)[0] > r.width - 12:
+            name = name[:-2] + "…"
         surf.blit(self.font_m.render(name, True, FG), (r.x + 8, r.y + 4))
         # Riga 2: stato + tool corrente
         detail = LABELS[s.status].lower()

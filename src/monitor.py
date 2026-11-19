@@ -2,7 +2,7 @@
 Claude Code LED Monitor — simulatore su PC.
 
 Avvia:
-  - un piccolo server HTTP locale che riceve gli eventi da hook_relay.py;
+  - un piccolo server HTTP locale che riceve gli eventi dal mod led-monitor (hooks/register.ts);
   - una finestra pygame che emula il pannello scelto.
 
 Uso:
@@ -100,7 +100,7 @@ class MonitorWindow:
         pygame.display.set_caption(f"Claude Monitor — {cfg['name']}   [1/2/3 profilo · D demo · ESC esci]")
         # Gli sprite PNG vanno caricati dopo set_mode (servono per convert)
         if self.mascot is None:
-            self.mascot = Mascot(HERE / "sprites")
+            self.mascot = Mascot(HERE.parent / "sprites")
         self.renderer = Renderer(profile, self.mascot)
         self.led_mask = make_led_mask(cfg["size"], self.scale) if cfg["led"] else None
 
