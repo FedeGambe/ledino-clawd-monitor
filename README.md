@@ -11,6 +11,7 @@ matrice LED 64×32, Pixoo 64×64.
 .claude-plugin/    plugin.json + marketplace.json: il mod per Claude Code
 hooks/register.ts  il mod: inoltra eventi, nome sessione, limiti d'uso, comandi in background
 avvia.bat          avvio rapido su Windows (crea il venv la prima volta)
+avvia-tray.bat     come avvia.bat, ma direttamente in modalità tray
 avvia.sh           avvio rapido su macOS / Linux
 ANIMAZIONI.md      repo da cui vengono le idee per le animazioni
 requirements.txt
@@ -52,7 +53,7 @@ Per provare il mod da una copia locale senza installarlo:
 | Modo | Avvio | Cosa fa |
 |---|---|---|
 | finestra | `avvia.bat` | finestra normale, tasti 1/2/3 per i profili |
-| tray | `avvia.bat --tray` | mascotte del colore di stato nell'area di notifica; clic = mostra/nasconde un popup sempre in primo piano in basso a destra (layout TFT). `ESC` nasconde, si esce dal menu dell'icona (tasto destro) |
+| tray | `avvia-tray.bat` (o `avvia.bat --tray`) | mascotte del colore di stato nell'area di notifica; clic = mostra/nasconde un popup sempre in primo piano in basso a destra (layout TFT). `ESC` nasconde, si esce dal menu dell'icona (tasto destro) |
 | pannello LED | da definire | il pannello leggerà `GET /state` oppure riceverà i frame 64×32 / 64×64 già disegnati |
 
 La tray è provata su Windows; su macOS `pystray` vuole il thread principale, va ancora adattata.
