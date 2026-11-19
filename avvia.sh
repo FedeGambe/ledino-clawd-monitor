@@ -2,6 +2,7 @@
 # Avvio rapido del Claude Monitor (macOS / Linux).
 #   ./avvia.sh            monitor collegato al mod
 #   ./avvia.sh --demo     eventi finti
+#   ./avvia.sh --tray     icona nella tray + popup sempre in primo piano
 #   ./avvia.sh --festa christmas
 cd "$(dirname "$0")" || exit 1
 

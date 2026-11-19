@@ -2,6 +2,7 @@
 rem Avvio rapido del Claude Monitor.
 rem   avvia.bat            monitor collegato al mod
 rem   avvia.bat --demo     eventi finti
+rem   avvia.bat --tray     icona nella tray + popup sempre in primo piano
 rem   avvia.bat --festa christmas
 cd /d "%~dp0"
 

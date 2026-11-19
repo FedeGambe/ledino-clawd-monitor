@@ -9,11 +9,12 @@ Uso:
     python monitor.py                 # profilo TFT 320x240
     python monitor.py --profile led   # matrice LED 64x32
     python monitor.py --demo          # eventi finti, senza Claude Code
+    python monitor.py --tray          # icona nella tray + popup sempre in primo piano
 
 Tasti nella finestra:
     1 / 2 / 3   cambia profilo (TFT / LED 64x32 / Pixoo 64x64)
     D           avvia/ferma la demo
-    ESC         esci
+    ESC         esci (con --tray: nasconde il popup; si esce dal menu dell'icona)
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from pathlib import Path
 import pygame
 
 from demo import DemoFeeder
-from render import PROFILES, Mascot, Renderer, make_led_mask, upscale
+from render import PROFILES, STATUS_COLOR, Mascot, Renderer, make_led_mask, upscale
 from state import StateStore, overall_status
 
 HERE = Path(__file__).resolve().parent
@@ -119,6 +120,7 @@ def main() -> None:
     ap.add_argument("--scale", type=int, help="ingrandimento (default dipende dal profilo)")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--demo", action="store_true", help="genera eventi finti")
+    ap.add_argument("--tray", action="store_true", help="icona nella tray + popup sempre in primo piano")
     ap.add_argument("--festa", choices=["christmas", "newyear", "halloween", "valentine", "off"],
                     help="forza una festa (default: in base alla data)")
     args = ap.parse_args()
@@ -133,7 +135,13 @@ def main() -> None:
         return
 
     pygame.init()
-    win = MonitorWindow(store, args.profile, args.scale)
+    # Il popup della tray sta in un angolo: di default a grandezza naturale
+    win = MonitorWindow(store, args.profile, args.scale or (1 if args.tray else None))
+    tray = icon = None
+    if args.tray:
+        import tray  # importa pystray solo se serve
+        tray.place_popup()
+        icon, shown_color, visible = tray.start_icon(), None, True
     demo = DemoFeeder(store.apply) if args.demo else None
     if demo:
         demo.start()
@@ -145,10 +153,22 @@ def main() -> None:
     running = True
     while running:
         for e in pygame.event.get():
-            if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE):
+            if e.type == pygame.QUIT:
                 running = False
+            elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                if tray:
+                    visible = False
+                    pygame.Window.from_display_module().hide()
+                else:
+                    running = False
+            elif tray and e.type == tray.TOGGLE:
+                visible = not visible
+                w = pygame.Window.from_display_module()
+                w.show() if visible else w.hide()
             elif e.type == pygame.KEYDOWN and e.key in keys:
                 win.set_profile(keys[e.key])
+                if tray:
+                    tray.place_popup()
             elif e.type == pygame.KEYDOWN and e.key == pygame.K_d:
                 # Avvia/ferma la demo al volo
                 if demo and demo.is_alive():
@@ -157,10 +177,24 @@ def main() -> None:
                 else:
                     demo = DemoFeeder(store.apply)
                     demo.start()
+        if tray:
+            # Colore e tooltip dell'icona seguono lo stato più importante
+            sessions = store.snapshot()
+            color = STATUS_COLOR[overall_status(sessions)]
+            title = f"Claude Monitor — {len(sessions)} sessioni"
+            # icon.visible: prima che l'icona sia comparsa gli aggiornamenti vanno persi
+            if icon.visible and (color, title) != shown_color:
+                icon.icon, icon.title = tray.icon_image(color), title
+                shown_color = (color, title)
+            if not visible:
+                clock.tick(5)  # popup nascosto: basta controllare gli eventi
+                continue
         win.frame(time.time() - t0)
         pygame.display.flip()
         clock.tick(FPS)
 
+    if icon:
+        icon.stop()
     pygame.quit()
 
 
