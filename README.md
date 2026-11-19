@@ -50,7 +50,7 @@ Per provare il mod da una copia locale senza installarlo:
 | Modo | Avvio | Cosa fa |
 |---|---|---|
 | finestra | `avvia.bat` | finestra normale, tasti 1/2/3 per i profili |
-| tray | `avvia.bat --tray` | pallino del colore di stato nell'area di notifica; clic = mostra/nasconde un popup sempre in primo piano in basso a destra (layout TFT). `ESC` nasconde, si esce dal menu dell'icona (tasto destro) |
+| tray | `avvia.bat --tray` | mascotte del colore di stato nell'area di notifica; clic = mostra/nasconde un popup sempre in primo piano in basso a destra (layout TFT). `ESC` nasconde, si esce dal menu dell'icona (tasto destro) |
 | pannello LED | da definire | il pannello leggerà `GET /state` oppure riceverà i frame 64×32 / 64×64 già disegnati |
 
 La tray è provata su Windows; su macOS `pystray` vuole il thread principale, va ancora adattata.

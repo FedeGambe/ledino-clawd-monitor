@@ -35,6 +35,7 @@ from state import StateStore, overall_status
 
 HERE = Path(__file__).resolve().parent
 BEZEL = 24          # cornice scura attorno al display, in pixel finestra
+TRAY_BEZEL = 3      # nel popup della tray: cornice sottile
 FPS = 20
 
 
@@ -85,8 +86,9 @@ def start_server(store: StateStore, port: int) -> ThreadingHTTPServer:
 # Finestra
 # ===========================================================================
 class MonitorWindow:
-    def __init__(self, store: StateStore, profile: str, scale: int | None) -> None:
+    def __init__(self, store: StateStore, profile: str, scale: int | None, bezel: int = BEZEL) -> None:
         self.store = store
+        self.bezel = bezel
         self.scale_override = scale
         self.mascot = None
         self.set_profile(profile)
@@ -97,7 +99,7 @@ class MonitorWindow:
         self.profile = profile
         self.scale = self.scale_override or cfg["scale"]
         w, h = cfg["size"]
-        self.screen = pygame.display.set_mode((w * self.scale + 2 * BEZEL, h * self.scale + 2 * BEZEL))
+        self.screen = pygame.display.set_mode((w * self.scale + 2 * self.bezel, h * self.scale + 2 * self.bezel))
         pygame.display.set_caption(f"Claude Monitor — {cfg['name']}   [1/2/3 profilo · D demo · ESC esci]")
         # Gli sprite PNG vanno caricati dopo set_mode (servono per convert)
         if self.mascot is None:
@@ -110,7 +112,7 @@ class MonitorWindow:
         sessions = self.store.snapshot()
         native = self.renderer.draw(sessions, overall_status(sessions), t, self.store.limits)
         self.screen.fill((28, 30, 36))  # cornice
-        self.screen.blit(upscale(native, self.scale, self.led_mask), (BEZEL, BEZEL))
+        self.screen.blit(upscale(native, self.scale, self.led_mask), (self.bezel, self.bezel))
         return self.screen
 
 
@@ -136,7 +138,8 @@ def main() -> None:
 
     pygame.init()
     # Il popup della tray sta in un angolo: di default a grandezza naturale
-    win = MonitorWindow(store, args.profile, args.scale or (1 if args.tray else None))
+    win = MonitorWindow(store, args.profile, args.scale or (1 if args.tray else None),
+                        TRAY_BEZEL if args.tray else BEZEL)
     tray = icon = None
     if args.tray:
         import tray  # importa pystray solo se serve

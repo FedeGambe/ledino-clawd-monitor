@@ -14,23 +14,36 @@ from __future__ import annotations
 
 import ctypes
 import sys
+from pathlib import Path
 
 import pygame
 import pystray
 from PIL import Image, ImageDraw
 
-from render import STATUS_COLOR
+from render import MASCOT_BODY, STATUS_COLOR
 from state import IDLE
 
 TOGGLE = pygame.event.custom_type()   # inviato dal thread della tray
-MARGIN = 12                           # distanza del popup dai bordi dello schermo
+MARGIN = 4                            # distanza del popup dai bordi dello schermo
+SPRITE = Path(__file__).resolve().parent.parent / "sprites" / "wake_2.png"  # mascotte in piedi, senza costume
 
 
 def icon_image(color: tuple[int, int, int]) -> Image.Image:
-    """Pallino del colore di stato, con bordo scuro per leggerlo su ogni tema."""
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    ImageDraw.Draw(img).ellipse((4, 4, 60, 60), fill=color, outline=(20, 22, 28), width=4)
-    return img
+    """La mascotte con il corpo del colore di stato (pallino se mancano gli sprite)."""
+    try:
+        src = Image.open(SPRITE).convert("RGBA")
+    except OSError:
+        img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        ImageDraw.Draw(img).ellipse((4, 4, 60, 60), fill=color, outline=(20, 22, 28), width=4)
+        return img
+    body = tuple(MASCOT_BODY[:3])
+    src.putdata([(*color, a) if (r, g, b) == body else (r, g, b, a) for r, g, b, a in src.getdata()])
+    src = src.crop(src.getbbox())
+    # Quadrato centrato, ingrandito a pixel netti
+    side = max(src.size)
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.paste(src, ((side - src.width) // 2, (side - src.height) // 2))
+    return sq.resize((64, 64), Image.NEAREST)
 
 
 def work_area() -> tuple[int, int, int, int]:
