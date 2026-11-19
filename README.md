@@ -31,10 +31,12 @@ src/
 2. **Mod per Claude Code**: nel prompt di Claude Code scrivi
 
    ```
-   /plugin install led-monitor --marketplace <owner>/<repo>
+   /plugin install led-monitor --marketplace FedeGambe/claude-led-monitor
    ```
 
    rispondi `y` per aggiungere il marketplace e scegli lo scope utente.
+   Il repository è privato: serve essere invitati e avere GitHub configurato
+   sul PC (es. `gh auth login`).
    Vale per la sessione in corso e per tutte le successive.
 
 Nessun percorso da configurare e niente da toccare in `settings.json`.
