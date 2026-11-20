@@ -53,7 +53,7 @@ Per provare il mod da una copia locale senza installarlo:
 | Modo | Avvio | Cosa fa |
 |---|---|---|
 | finestra | `avvia.bat` | finestra normale, tasti 1/2/3 per i profili |
-| tray | `avvia-tray.bat` (o `avvia.bat --tray`) | mascotte del colore di stato nell'area di notifica; clic = mostra/nasconde un popup sempre in primo piano in basso a destra (layout TFT). `ESC` nasconde, si esce dal menu dell'icona (tasto destro) |
+| tray | `avvia-tray.bat` (o `avvia.bat --tray`) | mascotte animata del colore di stato nell'area di notifica; clic = mostra/nasconde un popup sempre in primo piano in basso a destra (layout TFT). Il popup si trascina col mouse, `+`/`-` o rotellina lo ridimensionano, `ESC` lo nasconde. Menu dell'icona (tasto destro): **Riposiziona** lo riporta nell'angolo, **Esci** chiude |
 | pannello LED | da definire | il pannello leggerà `GET /state` oppure riceverà i frame 64×32 / 64×64 già disegnati |
 
 La tray è provata su Windows; su macOS `pystray` vuole il thread principale, va ancora adattata.
@@ -63,7 +63,7 @@ La tray è provata su Windows; su macOS `pystray` vuole il thread principale, va
 `avvia.bat --demo` (o `./avvia.sh --demo`): eventi finti.
 Accetta gli stessi argomenti di `src/monitor.py`.
 
-Tasti: `1` TFT · `2` LED 64×32 · `3` Pixoo · `D` avvia/ferma demo · `ESC` esci.
+Tasti: `1` TFT · `2` LED 64×32 · `3` Pixoo · `+`/`-` o rotellina zoom · `D` avvia/ferma demo · `ESC` esci.
 
 ## Stati
 

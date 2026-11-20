@@ -14,6 +14,7 @@ Uso:
 Tasti nella finestra:
     1 / 2 / 3   cambia profilo (TFT / LED 64x32 / Pixoo 64x64)
     D           avvia/ferma la demo
+    + / -       zoom (anche rotellina del mouse)
     ESC         esci (con --tray: nasconde il popup; si esce dal menu dell'icona)
 """
 
@@ -30,12 +31,13 @@ from pathlib import Path
 import pygame
 
 from demo import DemoFeeder
-from render import PROFILES, STATUS_COLOR, Mascot, Renderer, make_led_mask, upscale
+from render import PROFILES, Mascot, Renderer, make_led_mask, upscale
 from state import StateStore, overall_status
 
 HERE = Path(__file__).resolve().parent
 BEZEL = 24          # cornice scura attorno al display, in pixel finestra
 TRAY_BEZEL = 3      # nel popup della tray: cornice sottile
+ZOOM_STEP = 1.1    # ogni passo di zoom (+/- o rotellina) ingrandisce del 10%
 FPS = 20
 
 
@@ -99,13 +101,21 @@ class MonitorWindow:
         self.profile = profile
         self.scale = self.scale_override or cfg["scale"]
         w, h = cfg["size"]
-        self.screen = pygame.display.set_mode((w * self.scale + 2 * self.bezel, h * self.scale + 2 * self.bezel))
-        pygame.display.set_caption(f"Claude Monitor — {cfg['name']}   [1/2/3 profilo · D demo · ESC esci]")
+        self.screen = pygame.display.set_mode((round(w * self.scale) + 2 * self.bezel, round(h * self.scale) + 2 * self.bezel))
+        pygame.display.set_caption(f"Claude Monitor — {cfg['name']}   [1/2/3 profilo · +/- zoom · D demo · ESC esci]")
         # Gli sprite PNG vanno caricati dopo set_mode (servono per convert)
         if self.mascot is None:
             self.mascot = Mascot(HERE.parent / "sprites")
         self.renderer = Renderer(profile, self.mascot)
         self.led_mask = make_led_mask(cfg["size"], self.scale) if cfg["led"] else None
+
+    def zoom(self, delta: int) -> None:
+        """Ingrandisce/rimpicciolisce del 10% a passo, tra 1x e la grandezza dello schermo."""
+        w, h = PROFILES[self.profile]["size"]
+        sw, sh = pygame.display.get_desktop_sizes()[0]
+        top = max(1, min((sw - 2 * self.bezel) / w, (sh - 80 - 2 * self.bezel) / h))
+        self.scale_override = max(1, min(top, self.scale * ZOOM_STEP ** delta))
+        self.set_profile(self.profile)
 
     def frame(self, t: float) -> pygame.Surface:
         """Disegna un frame completo (display + cornice) e lo restituisce."""
@@ -144,7 +154,8 @@ def main() -> None:
     if args.tray:
         import tray  # importa pystray solo se serve
         tray.place_popup()
-        icon, shown_color, visible = tray.start_icon(), None, True
+        icon, shown_icon, visible = tray.start_icon(), None, True
+        drag = None  # punto del popup afferrato col mouse (trascinamento)
     demo = DemoFeeder(store.apply) if args.demo else None
     if demo:
         demo.start()
@@ -152,6 +163,8 @@ def main() -> None:
     print(f"In ascolto su http://127.0.0.1:{args.port}/event  (stato: /state)")
     clock, t0 = pygame.time.Clock(), time.time()
     keys = {pygame.K_1: "tft", pygame.K_2: "led", pygame.K_3: "pixoo"}
+    zoom_keys = {pygame.K_PLUS: 1, pygame.K_EQUALS: 1, pygame.K_KP_PLUS: 1,
+                 pygame.K_MINUS: -1, pygame.K_KP_MINUS: -1}
 
     running = True
     while running:
@@ -168,10 +181,29 @@ def main() -> None:
                 visible = not visible
                 w = pygame.Window.from_display_module()
                 w.show() if visible else w.hide()
-            elif e.type == pygame.KEYDOWN and e.key in keys:
-                win.set_profile(keys[e.key])
+            elif tray and e.type == tray.RESET:
+                visible = True
+                tray.place_popup().show()
+            elif tray and e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                drag = e.pos
+            elif tray and e.type == pygame.MOUSEBUTTONUP and e.button == 1:
+                drag = None
+            elif tray and e.type == pygame.MOUSEMOTION and drag:
+                # Popup senza bordi: si sposta trascinandolo da un punto qualsiasi
+                w = pygame.Window.from_display_module()
+                x, y = w.position
+                w.position = (x + e.pos[0] - drag[0], y + e.pos[1] - drag[1])
+            elif e.type == pygame.MOUSEWHEEL or (e.type == pygame.KEYDOWN and (e.key in keys or e.key in zoom_keys)):
+                # Il popup resta con l'angolo in basso a destra dov'era
+                corner = tray.corner_of(pygame.Window.from_display_module()) if tray else None
+                if e.type == pygame.MOUSEWHEEL:
+                    win.zoom(1 if e.y > 0 else -1)
+                elif e.key in zoom_keys:
+                    win.zoom(zoom_keys[e.key])
+                else:
+                    win.set_profile(keys[e.key])
                 if tray:
-                    tray.place_popup()
+                    tray.place_popup(corner)
             elif e.type == pygame.KEYDOWN and e.key == pygame.K_d:
                 # Avvia/ferma la demo al volo
                 if demo and demo.is_alive():
@@ -181,14 +213,14 @@ def main() -> None:
                     demo = DemoFeeder(store.apply)
                     demo.start()
         if tray:
-            # Colore e tooltip dell'icona seguono lo stato più importante
+            # Icona animata con la mascotte dello stato più importante; tooltip col numero di sessioni
             sessions = store.snapshot()
-            color = STATUS_COLOR[overall_status(sessions)]
-            title = f"Claude Monitor — {len(sessions)} sessioni"
+            state = overall_status(sessions)
+            now = (state, tray.icon_frame(state, time.time() - t0), f"Claude Monitor — {len(sessions)} sessioni")
             # icon.visible: prima che l'icona sia comparsa gli aggiornamenti vanno persi
-            if icon.visible and (color, title) != shown_color:
-                icon.icon, icon.title = tray.icon_image(color), title
-                shown_color = (color, title)
+            if icon.visible and now != shown_icon:
+                icon.icon, icon.title = tray.icon_frames(state)[now[1]], now[2]
+                shown_icon = now
             if not visible:
                 clock.tick(5)  # popup nascosto: basta controllare gli eventi
                 continue

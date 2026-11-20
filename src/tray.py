@@ -1,7 +1,7 @@
 """
 Modalità tray: icona nell'area di notifica + popup sempre in primo piano.
 
-L'icona prende il colore dello stato più importante (arancio lavora, giallo
+L'icona è la mascotte animata dello stato più importante (arancio lavora, giallo
 attende, verde finito, grigio pausa). Clic sull'icona: mostra/nasconde il
 popup, una finestra senza bordi in basso a destra con il layout TFT.
 
@@ -20,30 +20,51 @@ import pygame
 import pystray
 from PIL import Image, ImageDraw
 
-from render import MASCOT_BODY, STATUS_COLOR
-from state import IDLE
+from render import _FPS, MASCOT_BODY, STATUS_COLOR
 
-TOGGLE = pygame.event.custom_type()   # inviato dal thread della tray
+TOGGLE = pygame.event.custom_type()   # dal thread della tray: mostra/nasconde
+RESET = pygame.event.custom_type()    # dal thread della tray: riporta il popup nell'angolo
 MARGIN = 4                            # distanza del popup dai bordi dello schermo
-SPRITE = Path(__file__).resolve().parent.parent / "sprites" / "wake_2.png"  # mascotte in piedi, senza costume
+SPRITES = Path(__file__).resolve().parent.parent / "sprites"
+_frames: dict[str, list[Image.Image]] = {}
 
 
-def icon_image(color: tuple[int, int, int]) -> Image.Image:
-    """La mascotte con il corpo del colore di stato (pallino se mancano gli sprite)."""
-    try:
-        src = Image.open(SPRITE).convert("RGBA")
-    except OSError:
+def icon_frames(state: str) -> list[Image.Image]:
+    """
+    Frame animati dell'icona: la mascotte dello stato (working_*.png, ...)
+    con il corpo del colore di stato. Pallino fisso se mancano gli sprite.
+    """
+    if state in _frames:
+        return _frames[state]
+    color = STATUS_COLOR[state]
+    srcs = [Image.open(f).convert("RGBA") for f in sorted(SPRITES.glob(f"{state}_*.png"))]
+    if not srcs:
         img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
         ImageDraw.Draw(img).ellipse((4, 4, 60, 60), fill=color, outline=(20, 22, 28), width=4)
-        return img
-    body = tuple(MASCOT_BODY[:3])
-    src.putdata([(*color, a) if (r, g, b) == body else (r, g, b, a) for r, g, b, a in src.getdata()])
-    src = src.crop(src.getbbox())
-    # Quadrato centrato, ingrandito a pixel netti
-    side = max(src.size)
-    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    sq.paste(src, ((side - src.width) // 2, (side - src.height) // 2))
-    return sq.resize((64, 64), Image.NEAREST)
+        _frames[state] = [img]
+        return _frames[state]
+    # Corpo = colore pieno più frequente (in pausa è un arancio più scuro di MASCOT_BODY)
+    body = max((c for c in srcs[0].getcolors() if c[1][3] == 255), default=(0, MASCOT_BODY))[1][:3]
+    # Un solo ritaglio per tutti i frame, così la mascotte non "salta" tra un frame e l'altro
+    boxes = [s.getbbox() for s in srcs]
+    box = (min(b[0] for b in boxes), min(b[1] for b in boxes),
+           max(b[2] for b in boxes), max(b[3] for b in boxes))
+    out = []
+    for src in srcs:
+        src.putdata([(*color, a) if (r, g, b) == body else (r, g, b, a) for r, g, b, a in src.getdata()])
+        src = src.crop(box)
+        # Quadrato centrato, ingrandito a pixel netti
+        side = max(src.size)
+        sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+        sq.paste(src, ((side - src.width) // 2, (side - src.height) // 2))
+        out.append(sq.resize((64, 64), Image.NEAREST))
+    _frames[state] = out
+    return out
+
+
+def icon_frame(state: str, t: float) -> int:
+    """Indice del frame al tempo t (stessa velocità della mascotte nel popup)."""
+    return int(t * _FPS[state]) % len(icon_frames(state))
 
 
 def work_area() -> tuple[int, int, int, int]:
@@ -62,13 +83,17 @@ def start_icon() -> pystray.Icon:
     def toggle(icon, item):
         pygame.event.post(pygame.event.Event(TOGGLE))
 
+    def reset(icon, item):
+        pygame.event.post(pygame.event.Event(RESET))
+
     def quit_(icon, item):
         pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     icon = pystray.Icon(
-        "claude-monitor", icon_image(STATUS_COLOR[IDLE]), "Claude Monitor",
+        "claude-monitor", icon_frames("idle")[0], "Claude Monitor",
         menu=pystray.Menu(
             pystray.MenuItem("Mostra / nascondi", toggle, default=True),  # default = clic sinistro
+            pystray.MenuItem("Riposiziona", reset),
             pystray.MenuItem("Esci", quit_),
         ),
     )
@@ -76,12 +101,22 @@ def start_icon() -> pystray.Icon:
     return icon
 
 
-def place_popup() -> pygame.Window:
-    """Rende la finestra pygame un popup: senza bordi, in primo piano, sopra la tray."""
+def place_popup(corner: tuple[int, int] | None = None) -> pygame.Window:
+    """
+    Rende la finestra pygame un popup: senza bordi, in primo piano.
+    corner: dove va l'angolo in basso a destra; di default sopra la tray.
+    """
     win = pygame.Window.from_display_module()
     win.borderless = True
     win.always_on_top = True
-    _, _, right, bottom = work_area()
+    if corner is None:
+        _, _, right, bottom = work_area()
+        corner = (right - MARGIN, bottom - MARGIN)
     w, h = win.size
-    win.position = (right - w - MARGIN, bottom - h - MARGIN)
+    win.position = (corner[0] - w, corner[1] - h)
     return win
+
+
+def corner_of(win: pygame.Window) -> tuple[int, int]:
+    """Angolo in basso a destra del popup: resta fermo quando cambia grandezza."""
+    return win.position[0] + win.size[0], win.position[1] + win.size[1]

@@ -597,13 +597,13 @@ class Renderer:
 # ===========================================================================
 # Resa a schermo (ingrandimento + effetto LED)
 # ===========================================================================
-def make_led_mask(size: tuple[int, int], scale: int) -> pygame.Surface:
+def make_led_mask(size: tuple[int, int], scale: float) -> pygame.Surface:
     """
     Maschera nera con "buchi" circolari: sovrapposta all'immagine ingrandita
     simula i singoli LED con lo spazio scuro tra uno e l'altro.
     """
     w, h = size
-    mask = pygame.Surface((w * scale, h * scale), pygame.SRCALPHA)
+    mask = pygame.Surface((round(w * scale), round(h * scale)), pygame.SRCALPHA)
     mask.fill((0, 0, 0, 255))
     radius = scale * 0.42
     # Disegniamo i fori direttamente sulla maschera: draw.circle scrive anche
@@ -614,9 +614,13 @@ def make_led_mask(size: tuple[int, int], scale: int) -> pygame.Surface:
     return mask
 
 
-def upscale(native: pygame.Surface, scale: int, led_mask: pygame.Surface | None):
-    """Ingrandisce senza sfocatura e applica la maschera LED se presente."""
-    big = pygame.transform.scale(native, (native.get_width() * scale, native.get_height() * scale))
+def upscale(native: pygame.Surface, scale: float, led_mask: pygame.Surface | None):
+    """
+    Ingrandisce senza sfocatura e applica la maschera LED se presente.
+    ponytail: con scala non intera i pixel escono larghi 1 o 2 punti alterni (nearest);
+    a schermo quasi non si nota, smoothscale sfocherebbe la pixel art.
+    """
+    big = pygame.transform.scale(native, (round(native.get_width() * scale), round(native.get_height() * scale)))
     if led_mask is not None:
         big.blit(led_mask, (0, 0))
     return big
