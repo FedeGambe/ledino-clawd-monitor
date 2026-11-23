@@ -1,0 +1,10 @@
+{
+    "repo": "ledino-clawd-monitor",
+    "t": "Ledino Claw'd Monitor",
+    "d": "Le sessioni di Claude Code in un colpo d'occhio: chi lavora, chi ti aspetta, a che punto è la todo list.",
+    "tags": ["Claude Code", "Python", "Pixel art", "LED"],
+    "y": 2026,
+    "live": "/ledino-clawd-monitor/",
+    "img": "img/cover_verticale.svg",
+    "colore": "#d97757"
+}
