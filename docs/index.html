@@ -166,6 +166,19 @@ figure text{fill:var(--ink-3); font:11px ui-monospace,Consolas,monospace}
 .leg{display:flex; flex-wrap:wrap; gap:6px 16px; padding:8px 12px 10px; font:600 .72rem/1.3 var(--f-data); color:var(--ink-2)}
 .leg i{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px}
 .led{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:-1px}
+h3{font:800 1.3rem/1.2 var(--f-display); letter-spacing:-.02em; margin:36px 0 0}
+h3 + p{margin-top:8px}
+.animazioni{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:16px 0 8px}
+figure.anim{margin:0; padding:0; background:var(--surface); display:flex; flex-direction:column}
+.sprite{--s:128px; width:var(--s); height:var(--s); margin:12px auto 4px; image-rendering:pixelated; background-repeat:no-repeat;
+  background-size:calc(var(--n) * var(--s)) var(--s); animation:gioca var(--t) steps(var(--n)) infinite}
+figure.anim:has(.sprite){background:radial-gradient(circle at 50% 45%,#2a1d22,var(--cover) 70%); border-color:#ffffff14}
+@keyframes gioca{to{background-position:calc(var(--n) * var(--s) * -1) 0}}
+@media (prefers-reduced-motion: reduce){ .sprite{animation:none} }
+figure.anim figcaption{padding:8px 12px 12px; text-align:center; color:#efe9dc}
+figure.anim b{display:block; font:700 .95rem/1.2 var(--f-display)}
+figure.anim span{font:600 .66rem/1.3 var(--f-data); letter-spacing:.06em; text-transform:uppercase; color:#9a9486}
+@media (max-width:560px){ .animazioni{grid-template-columns:repeat(2,1fr)} .sprite{--s:96px} }
 @media (max-width:700px){
   .azioni{gap:6px}
   .bottone-barra{padding:7px 10px; letter-spacing:.05em}
@@ -197,7 +210,7 @@ figure text{fill:var(--ink-3); font:11px ui-monospace,Consolas,monospace}
 <div class="impianto">
 <nav class="indice" id="indice" aria-label="Indice">
   <div class="titolo">Indice</div>
-    <ol><li class="gruppo-grigio"><a href="#c0">Sintesi</a></li><li><a href="#c1">1. A cosa serve</a></li><li><a href="#c2">2. Come funziona</a></li><li><a href="#c3">3. Stati e mascotte</a></li><li><a href="#c4">4. Avanzamento e limiti</a></li><li><a href="#c5">5. Installazione e uso</a></li><li><a class="link-b" href="#c6">6. Stato e prossimi passi</a></li><li><a class="link-b" href="#c7">7. Crediti</a></li></ol>
+    <ol><li class="gruppo-grigio"><a href="#c0">Sintesi</a></li><li><a href="#c1">1. A cosa serve</a></li><li><a href="#c2">2. Come funziona</a></li><li><a href="#c3">3. Stati e mascotte</a></li><li><a href="#c4">4. Le animazioni</a></li><li><a href="#c5">5. Avanzamento e limiti</a></li><li><a href="#c6">6. Installazione e uso</a></li><li><a class="link-b" href="#c7">7. Stato e prossimi passi</a></li><li><a class="link-b" href="#c8">8. Crediti</a></li></ol>
 </nav>
 <main>
 <section class="capitolo" id="c0" data-titolo="Sintesi" data-parte=""><h2 data-n="Sintesi">In breve</h2>
@@ -258,13 +271,49 @@ figure text{fill:var(--ink-3); font:11px ui-monospace,Consolas,monospace}
   <p>La mascotte è pixel art 32×32 generata da <code>src/make_sprites.py</code>; si può sostituire mettendo propri PNG in <code>sprites/</code>.</p>
 </section>
 
-<section class="capitolo parte-a" id="c4" data-titolo="4. Avanzamento e limiti" data-parte="a"><h2 data-n="Capitolo 04">Avanzamento e limiti d'uso</h2>
+<section class="capitolo parte-a" id="c4" data-titolo="4. Le animazioni" data-parte="a"><h2 data-n="Capitolo 04">Le animazioni</h2>
+  <p>Tutte le animazioni della mascotte, alla velocità con cui girano nel monitor. Sono pixel art 32×32, qui ingrandite quattro volte.</p>
+  <h3>Gli stati</h3>
+  <p>Uno per stato, più due momenti brevi: il saluto a una sessione nuova e lo scossone quando un tool fallisce.</p>
+  <div class="animazioni">
+    <figure class="anim"><div class="sprite" role="img" aria-label="Benvenuto" style="--n:4;--t:0.666667s;background-image:url(img/anim/wake.png)"></div><figcaption><b>Benvenuto</b><span>sessione nuova</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Lavora" style="--n:4;--t:1s;background-image:url(img/anim/working.png)"></div><figcaption><b>Lavora</b><span>arancio</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Attende" style="--n:4;--t:2s;background-image:url(img/anim/waiting.png)"></div><figcaption><b>Attende</b><span>giallo</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Finito" style="--n:6;--t:6s;background-image:url(img/anim/done.png)"></div><figcaption><b>Finito</b><span>verde</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Pausa" style="--n:3;--t:6s;background-image:url(img/anim/idle.png)"></div><figcaption><b>Pausa</b><span>grigio</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Tool fallito" style="--n:4;--t:0.666667s;background-image:url(img/anim/error.png)"></div><figcaption><b>Tool fallito</b><span>4 secondi</span></figcaption></figure>
+  </div>
+  <h3>I costumi al lavoro</h3>
+  <p>Mentre lavora, la mascotte si veste in base al tool che Claude sta usando.</p>
+  <div class="animazioni">
+    <figure class="anim"><div class="sprite" role="img" aria-label="Pensa" style="--n:4;--t:1s;background-image:url(img/anim/working-think.png)"></div><figcaption><b>Pensa</b><span>nessun tool ancora</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Terminale" style="--n:4;--t:1s;background-image:url(img/anim/working-bash.png)"></div><figcaption><b>Terminale</b><span>Bash</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Detective" style="--n:4;--t:1s;background-image:url(img/anim/working-read.png)"></div><figcaption><b>Detective</b><span>Read, Grep</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Pittore" style="--n:4;--t:1s;background-image:url(img/anim/working-edit.png)"></div><figcaption><b>Pittore</b><span>Edit, Write</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Cowboy" style="--n:4;--t:1s;background-image:url(img/anim/working-agent.png)"></div><figcaption><b>Cowboy</b><span>Agent</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Mago" style="--n:4;--t:1s;background-image:url(img/anim/working-mcp.png)"></div><figcaption><b>Mago</b><span>MCP</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Giocoliere" style="--n:6;--t:1.5s;background-image:url(img/anim/working-todo.png)"></div><figcaption><b>Giocoliere</b><span>todo list</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Meteo" style="--n:4;--t:1s;background-image:url(img/anim/working-web.png)"></div><figcaption><b>Meteo</b><span>Web</span></figcaption></figure>
+  </div>
+  <h3>Fine lavoro e pausa</h3>
+  <p>Dopo la festa del FINITO passeggia con la spunta; in PAUSA cambia scena ogni 20 secondi.</p>
+  <div class="animazioni">
+    <figure class="anim"><div class="sprite" role="img" aria-label="Passeggiata" style="--n:4;--t:1s;background-image:url(img/anim/done-walk.png)"></div><figcaption><b>Passeggiata</b><span>con la spunta</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Caffè" style="--n:4;--t:2s;background-image:url(img/anim/idle-coffee.png)"></div><figcaption><b>Caffè</b><span>pausa</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Passeggiata" style="--n:4;--t:1s;background-image:url(img/anim/idle-walk.png)"></div><figcaption><b>Passeggiata</b><span>pausa</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Cuffie" style="--n:4;--t:2s;background-image:url(img/anim/idle-music.png)"></div><figcaption><b>Cuffie</b><span>pausa</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Libro" style="--n:4;--t:4s;background-image:url(img/anim/idle-book.png)"></div><figcaption><b>Libro</b><span>pausa</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Chitarra" style="--n:4;--t:1.33333s;background-image:url(img/anim/idle-guitar.png)"></div><figcaption><b>Chitarra</b><span>pausa</span></figcaption></figure>
+  </div>
+</section>
+
+<section class="capitolo parte-a" id="c5" data-titolo="5. Avanzamento e limiti" data-parte="a"><h2 data-n="Capitolo 05">Avanzamento e limiti d'uso</h2>
   <p><strong>Avanzamento.</strong> Deriva dalla todo list interna di Claude Code (<code>TodoWrite</code> oppure <code>TaskCreate</code>/<code>TaskUpdate</code>, a seconda della versione). Sulle richieste brevi senza todo list la barra scorre e basta.</p>
   <p><strong>Limiti d'uso.</strong> Il mod li invia come evento <code>RateLimits</code>. Una tacca bianca segna il tempo trascorso della finestra, cioè il ritmo giusto: barra verde se sei sotto la tacca, gialla fino a 15 punti sopra, rossa oltre. I limiti sono dell'account, quindi includono anche l'uso su claude.ai, ma si aggiornano solo quando Claude Code fa una richiesta; con una API key senza abbonamento la riga resta vuota.</p>
   <p><strong>Comandi in background.</strong> Se Claude ha finito ma un comando lanciato in background gira ancora, la sessione resta LAVORA con il costume del terminale finché il comando non termina.</p>
 </section>
 
-<section class="capitolo parte-a" id="c5" data-titolo="5. Installazione e uso" data-parte="a"><h2 data-n="Capitolo 05">Installazione e uso</h2>
+<section class="capitolo parte-a" id="c6" data-titolo="6. Installazione e uso" data-parte="a"><h2 data-n="Capitolo 06">Installazione e uso</h2>
   <p><strong>1. Monitor.</strong> Clona il repo e avvia <code>avvia.bat</code> (Windows) o <code>./avvia.sh</code> (macOS/Linux). La prima volta crea il venv e installa le dipendenze; serve Python 3.10+.</p>
   <p><strong>2. Mod.</strong> Nel prompt di Claude Code: <code>/plugin install led-monitor --marketplace FedeGambe/ledino-clawd-monitor</code>, poi scope utente. Nessun percorso da configurare.</p>
   <div class="tabella"><table>
@@ -278,7 +327,7 @@ figure text{fill:var(--ink-3); font:11px ui-monospace,Consolas,monospace}
   <p>Tasti: <code>1</code> TFT · <code>2</code> LED 64×32 · <code>3</code> Pixoo · <code>+</code>/<code>-</code> o rotellina zoom · <code>D</code> demo · <code>ESC</code> esci.</p>
 </section>
 
-<section class="capitolo parte-b" id="c6" data-titolo="6. Stato e prossimi passi" data-parte="b"><h2 data-n="Capitolo 06">Stato e prossimi passi</h2>
+<section class="capitolo parte-b" id="c7" data-titolo="7. Stato e prossimi passi" data-parte="b"><h2 data-n="Capitolo 07">Stato e prossimi passi</h2>
   <ul>
     <li>Il pannello vero (ESP32 via seriale o Wi-Fi) è ancora da definire: leggerà <code>GET /state</code>, che restituisce già lo stato in JSON, oppure riceverà i frame 64×32 / 64×64 già disegnati.</li>
     <li>La tray è provata su Windows; su macOS <code>pystray</code> vuole il thread principale e va ancora adattata.</li>
@@ -286,7 +335,7 @@ figure text{fill:var(--ink-3); font:11px ui-monospace,Consolas,monospace}
   </ul>
 </section>
 
-<section class="capitolo parte-b" id="c7" data-titolo="7. Crediti" data-parte="b"><h2 data-n="Capitolo 07">Crediti</h2>
+<section class="capitolo parte-b" id="c8" data-titolo="8. Crediti" data-parte="b"><h2 data-n="Capitolo 08">Crediti</h2>
   <p>Claw'd è la mascotte di Claude Code (Anthropic). Sprite e icona sono disegnati da zero; le idee per le animazioni vengono da progetti della community: <a href="https://github.com/rullerzhou-afk/clawd-on-desk">clawd-on-desk</a>, <a href="https://github.com/BrianHuang813/clawd-actor">clawd-actor</a>, <a href="https://github.com/b-barri/clawd-touchbar">clawd-touchbar</a>, <a href="https://github.com/xixicc186/clawd-emotes-skill">clawd-emotes-skill</a>.</p>
 </section>
 
