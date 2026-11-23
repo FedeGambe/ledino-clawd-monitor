@@ -1,5 +1,5 @@
 """
-Claude Code LED Monitor — simulatore su PC.
+Ledino Claw'd Monitor — simulatore su PC.
 
 Avvia:
   - un piccolo server HTTP locale che riceve gli eventi dal mod led-monitor (hooks/register.ts);
@@ -102,7 +102,7 @@ class MonitorWindow:
         self.scale = self.scale_override or cfg["scale"]
         w, h = cfg["size"]
         self.screen = pygame.display.set_mode((round(w * self.scale) + 2 * self.bezel, round(h * self.scale) + 2 * self.bezel))
-        pygame.display.set_caption(f"Claude Monitor — {cfg['name']}   [1/2/3 profilo · +/- zoom · D demo · ESC esci]")
+        pygame.display.set_caption(f"Ledino — {cfg['name']}   [1/2/3 profilo · +/- zoom · D demo · ESC esci]")
         # Gli sprite PNG vanno caricati dopo set_mode (servono per convert)
         if self.mascot is None:
             self.mascot = Mascot(HERE.parent / "sprites")
@@ -216,7 +216,7 @@ def main() -> None:
             # Icona animata con la mascotte dello stato più importante; tooltip col numero di sessioni
             sessions = store.snapshot()
             state = overall_status(sessions)
-            now = (state, tray.icon_frame(state, time.time() - t0), f"Claude Monitor — {len(sessions)} sessioni")
+            now = (state, tray.icon_frame(state, time.time() - t0), f"Ledino — {len(sessions)} sessioni")
             # icon.visible: prima che l'icona sia comparsa gli aggiornamenti vanno persi
             if icon.visible and now != shown_icon:
                 icon.icon, icon.title = tray.icon_frames(state)[now[1]], now[2]

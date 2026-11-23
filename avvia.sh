@@ -1,5 +1,5 @@
 #!/bin/sh
-# Avvio rapido del Claude Monitor (macOS / Linux).
+# Avvio rapido di Ledino Claw'd Monitor (macOS / Linux).
 #   ./avvia.sh            monitor collegato al mod
 #   ./avvia.sh --demo     eventi finti
 #   ./avvia.sh --tray     icona nella tray + popup sempre in primo piano

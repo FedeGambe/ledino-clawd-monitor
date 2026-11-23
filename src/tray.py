@@ -90,7 +90,7 @@ def start_icon() -> pystray.Icon:
         pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     icon = pystray.Icon(
-        "claude-monitor", icon_frames("idle")[0], "Claude Monitor",
+        "ledino", icon_frames("idle")[0], "Ledino",
         menu=pystray.Menu(
             pystray.MenuItem("Mostra / nascondi", toggle, default=True),  # default = clic sinistro
             pystray.MenuItem("Riposiziona", reset),

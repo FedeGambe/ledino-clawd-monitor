@@ -1,4 +1,4 @@
-# Claude Monitor — simulatore del pannello
+# Ledino Claw'd Monitor — simulatore del pannello
 
 Mostra in una finestra cosa stanno facendo le sessioni di Claude Code
 (VS Code, Antigravity, terminale): quante sono, chi lavora, chi ti aspetta,
@@ -14,6 +14,9 @@ avvia.bat          avvio rapido su Windows (crea il venv la prima volta)
 avvia-tray.bat     come avvia.bat, ma direttamente in modalità tray
 avvia.sh           avvio rapido su macOS / Linux
 ANIMAZIONI.md      repo da cui vengono le idee per le animazioni
+icona.ico          icona dell'app (collegamento, menu Start)
+tool/
+  make_icon.py     rigenera icona.ico
 requirements.txt
 sprites/           PNG della mascotte (generati)
 src/
@@ -32,7 +35,7 @@ src/
 2. **Mod per Claude Code**: nel prompt di Claude Code scrivi
 
    ```
-   /plugin install led-monitor --marketplace FedeGambe/claude-led-monitor
+   /plugin install led-monitor --marketplace FedeGambe/ledino-clawd-monitor
    ```
 
    rispondi `y` per aggiungere il marketplace e scegli lo scope utente.
@@ -132,3 +135,14 @@ più frame. Se mancano, si usa il robottino segnaposto.
   del monitor da `~/.claude/settings.json` (le voci che contengono `hook_relay.py`),
   altrimenti ogni evento arriva due volte.
 - Il server ascolta solo su `127.0.0.1`.
+
+## Crediti
+
+Claw'd è la mascotte di Claude Code (Anthropic). Sprite e icona sono disegnati
+da zero; le idee per le animazioni vengono da questi progetti della community
+(dettagli in [ANIMAZIONI.md](ANIMAZIONI.md)):
+
+- [rullerzhou-afk/clawd-on-desk](https://github.com/rullerzhou-afk/clawd-on-desk)
+- [BrianHuang813/clawd-actor](https://github.com/BrianHuang813/clawd-actor)
+- [b-barri/clawd-touchbar](https://github.com/b-barri/clawd-touchbar)
+- [xixicc186/clawd-emotes-skill](https://github.com/xixicc186/clawd-emotes-skill)

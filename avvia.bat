@@ -1,5 +1,5 @@
 @echo off
-rem Avvio rapido del Claude Monitor.
+rem Avvio rapido di Ledino Claw'd Monitor.
 rem   avvia.bat            monitor collegato al mod
 rem   avvia.bat --demo     eventi finti
 rem   avvia.bat --tray     icona nella tray + popup sempre in primo piano

@@ -1,6 +1,6 @@
 import type { EngineInterface, Register } from 'claude-code'
 
-// Mod del Claude Monitor: al posto dei vecchi hook in settings.json (hook_relay.py).
+// Mod di Ledino Claw'd Monitor: al posto dei vecchi hook in settings.json (hook_relay.py).
 // Inoltra al monitor gli eventi hook di Claude Code (lo stesso JSON che gli
 // hook ricevono su stdin, filtrato), i limiti d'uso e i comandi in background.
 

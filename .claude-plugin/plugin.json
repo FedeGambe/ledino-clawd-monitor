@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "author": { "name": "Federico Gamberini" },
   "license": "MIT",
-  "description": "Invia stato delle sessioni, todo, nome sessione e limiti d'uso al Claude Monitor locale",
+  "description": "Invia stato delle sessioni, todo, nome sessione e limiti d'uso a Ledino Claw'd Monitor in locale",
   "userConfig": {
     "monitor_url": {
       "type": "string",
