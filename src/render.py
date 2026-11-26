@@ -38,7 +38,7 @@ MASCOT_BODY_IDLE = (160, 98, 80)   # più spento in pausa
 PAUSE_SCENES = ("wink", "coffee", "walk", "music", "wink", "book", "walk", "guitar")  # passeggiata e occhiolino tornano due volte
 WALK_SPEED = 8            # passeggiata: pixel del display al secondo
 DONE_CELEBRATE_S = 10     # FINITO: festeggia per 10 s, poi passeggia
-PAUSE_SCENE_S = 20
+PAUSE_SCENE_S = 10
 SLEEP_AFTER_S = 40 * 60   # dall'ultimo evento: 10 min "finito" + 30 min di scene
 
 # --- Profili: risoluzione nativa e resa a LED ------------------------------
