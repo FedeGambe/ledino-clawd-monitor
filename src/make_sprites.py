@@ -109,6 +109,9 @@ def body(surf, lift=0, arms="down", legs=0, eyes="open", mouth="smile",
             surf.set_at((x0 + ex, ey), EYE)
             surf.set_at((x0 + ex - 1, ey + 1), EYE)
             surf.set_at((x0 + ex + 1, ey + 1), EYE)
+    elif eyes == "wink":  # occhio sinistro aperto, destro chiuso
+        rect(surf, x0 + 3, ey, 1, 2, EYE)
+        rect(surf, x0 + 9, ey + 1, 3, 1, EYE)
     elif eyes == "closed":
         for ex in (2, 9):
             rect(surf, x0 + ex, ey + 1, 3, 1, EYE)
@@ -374,6 +377,11 @@ def pause_scene(scene, i):
             pygame.draw.line(s, PAL["b"], (15, top + 5), (24, top + 1))
             rect(s, 24, top - 1, 2, 2, PAL["b"])
             stamp(s, NOTE, 26, top - 8 - i % 2, c)
+        elif scene == "wink":  # guarda verso di te e ammicca, con un luccichio
+            top = body(s, color=BODY_IDLE, eyes="wink" if i == 2 else "open",
+                       mouth="grin" if i == 2 else "smile")
+            if i == 2:
+                stamp(s, SPARK, 22, top - 3, c)
         elif scene == "walk":  # passeggia verso destra (il monitor lo specchia al ritorno)
             body(s, color=BODY_IDLE, lift=i % 2, legs=i % 2, eyes="right", mouth="smile")
     return frame(draw)

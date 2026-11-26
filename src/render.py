@@ -35,7 +35,7 @@ MASCOT_BODY = (217, 119, 87)       # arancio terracotta
 MASCOT_BODY_IDLE = (160, 98, 80)   # più spento in pausa
 
 # Pausa: una scena diversa ogni PAUSE_SCENE_S secondi, poi dorme
-PAUSE_SCENES = ("coffee", "walk", "music", "book", "walk", "guitar")  # la passeggiata torna due volte
+PAUSE_SCENES = ("wink", "coffee", "walk", "music", "wink", "book", "walk", "guitar")  # passeggiata e occhiolino tornano due volte
 WALK_SPEED = 8            # passeggiata: pixel del display al secondo
 DONE_CELEBRATE_S = 10     # FINITO: festeggia per 10 s, poi passeggia
 PAUSE_SCENE_S = 20
@@ -141,7 +141,7 @@ _FACES = {
 }
 # Velocità dell'animazione (frame al secondo) per stato
 _FPS = {WORKING: 4, WAITING: 2, DONE: 1, IDLE: 0.5, "error": 6, "wake": 6,
-        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3, "idle-walk": 4, "done-walk": 4, "done-walk-left": 4}
+        "idle-coffee": 2, "idle-music": 2, "idle-book": 1, "idle-guitar": 3, "idle-wink": 2,"idle-walk": 4, "done-walk": 4, "done-walk-left": 4}
 
 
 def _build_frame(state: str, frame: int) -> pygame.Surface:
@@ -501,6 +501,8 @@ class Renderer:
         info = f"{len(sessions)} sess · {n_work} lav · {n_wait} att"
         txt = self.font_s.render(info, True, DIM)
         surf.blit(txt, (314 - txt.get_width(), 6))
+        if overall == IDLE:
+            return self._tft_pause(sessions, t)
 
         # Pannello sinistro: mascotte + stato globale
         surf.blit(*self._mascot(overall, t, 96, left=0, room=16, y=40))
@@ -527,6 +529,39 @@ class Renderer:
         if len(sessions) > 4:
             more = self.font_s.render(f"+{len(sessions) - 4} altre", True, DIM)
             surf.blit(more, (x0, 226))
+
+    def _tft_pause(self, sessions, t):
+        """Tutto in pausa: mascotte grande al centro, sessioni piccole in riga sotto il titolo, consumi in fondo."""
+        surf = self.surface
+        # Sessioni: una riga sola, pallino + nome, max 4 poi "+N"
+        shown = sessions[:4] if len(sessions) <= 4 else sessions[:3]
+        if not sessions:
+            msg = self.font_s.render("nessuna sessione", True, DIM)
+            surf.blit(msg, (160 - msg.get_width() // 2, 25))
+        w = 308 // max(1, len(shown) + (len(sessions) > 4))
+        for i, s in enumerate(shown):
+            x = 6 + i * w
+            pygame.draw.circle(surf, STATUS_COLOR[s.status], (x + 3, 30), 3)
+            name = s.title or s.project
+            while len(name) > 1 and self.font_s.size(name)[0] > w - 16:
+                name = name[:-2] + "…"
+            surf.blit(self.font_s.render(name, True, DIM), (x + 10, 25))
+        if len(sessions) > 4:
+            surf.blit(self.font_s.render(f"+{len(sessions) - 3}", True, DIM), (6 + 3 * w, 25))
+
+        # Mascotte 160 px (5x lo sprite 32) al centro; passeggiando attraversa tutto il popup
+        surf.blit(*self._mascot(IDLE, t, 160, left=0, room=160, y=36))
+        label = self.font_l.render(LABELS[IDLE], True, STATUS_COLOR[IDLE])
+        surf.blit(label, (160 - label.get_width() // 2, 186))
+
+        # In fondo: limiti 5h e 7g affiancati
+        for i, (label, pct, reset, elapsed) in enumerate(self.limits):
+            x = 6 + i * 157
+            surf.blit(self.font_s.render(f"{label} {pct:.0f}%", True, limit_color(pct, elapsed)), (x, 212))
+            if reset:
+                r = self.font_s.render(reset, True, DIM)
+                surf.blit(r, (x + 151 - r.get_width(), 212))
+            limit_bar(surf, pygame.Rect(x, 224, 151, 5), pct, elapsed)
 
     def _tft_card(self, s: Session, r: pygame.Rect, t: float) -> None:
         surf, col = self.surface, STATUS_COLOR[s.status]
