@@ -1,9 +1,20 @@
+<p align="center"><img src="docs/img/favicon.svg" width="112" alt="Logo di Ledino"></p>
+
 # Ledino Claw'd Monitor — simulatore del pannello
 
 Mostra in una finestra cosa stanno facendo le sessioni di Claude Code
 (VS Code, Antigravity, terminale): quante sono, chi lavora, chi ti aspetta,
 e l'avanzamento della todo list. Emula tre display: TFT 320×240,
 matrice LED 64×32, Pixoo 64×64.
+
+<p align="center">
+  <img src="docs/img/screen-tft.png" width="49%" alt="TFT 320x240">
+  <img src="docs/img/screen-pausa.png" width="49%" alt="TFT in pausa">
+  <img src="docs/img/screen-led.png" width="49%" alt="LED 64x32">
+  <img src="docs/img/screen-pixoo.png" width="40%" alt="Pixoo 64x64">
+</p>
+
+Animazioni della mascotte: <img src="docs/img/anim/working-edit.png" height="48" alt="pittore"> <img src="docs/img/anim/working-bash.png" height="48" alt="terminale"> <img src="docs/img/anim/idle-coffee.png" height="48" alt="caffè"> (tutte nella [pagina del progetto](docs/index.html#c4)). Le immagini si rigenerano con `python tool/make_shots.py`.
 
 ## Cartella
 
@@ -17,6 +28,7 @@ ANIMAZIONI.md      repo da cui vengono le idee per le animazioni
 icona.ico          icona dell'app (collegamento, menu Start)
 tool/
   make_icon.py     rigenera icona.ico
+  make_shots.py    rigenera gli screenshot in docs/img/
 requirements.txt
 sprites/           PNG della mascotte (generati)
 src/
@@ -88,7 +100,7 @@ Mascotte (`python src/make_sprites.py` rigenera `sprites/`):
 - in FINITO festeggia per 10 s, poi passeggia con la spunta verde sopra la testa;
 - ATTENDE scatta anche quando Claude ti fa una domanda (`AskUserQuestion`) o propone un piano (`ExitPlanMode`);
 - a ogni nuova sessione fa un doppio salto di benvenuto;
-- in PAUSA alterna una scena ogni 20 s (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 min si addormenta;
+- in PAUSA alterna una scena ogni 10 s (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 min si addormenta;
   la passeggiata va avanti e indietro su Pixoo e TFT, sul LED 64x32 cammina sul posto;
 - feste automatiche per data (Natale, Capodanno, Halloween, San Valentino): cappello e
   neve/fuochi/fantasmini/cuori. Per provarle: `python src/monitor.py --festa christmas`

@@ -173,6 +173,10 @@ figure.anim{margin:0; padding:0; background:var(--surface); display:flex; flex-d
 .sprite{--s:128px; width:var(--s); height:var(--s); margin:12px auto 4px; image-rendering:pixelated; background-repeat:no-repeat;
   background-size:calc(var(--n) * var(--s)) var(--s); animation:gioca var(--t) steps(var(--n)) infinite}
 figure.anim:has(.sprite){background:radial-gradient(circle at 50% 45%,#2a1d22,var(--cover) 70%); border-color:#ffffff14}
+.schermi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:16px 0 8px}
+.schermi figure{margin:0}
+.schermi img{display:block; width:100%; height:auto; image-rendering:pixelated; border-radius:4px}
+.schermi figcaption{font:600 .72rem/1.3 var(--f-data); letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); padding:8px 2px 2px}
 @keyframes gioca{to{background-position:calc(var(--n) * var(--s) * -1) 0}}
 @media (prefers-reduced-motion: reduce){ .sprite{animation:none} }
 figure.anim figcaption{padding:8px 12px 12px; text-align:center; color:#efe9dc}
@@ -232,6 +236,14 @@ figure.anim span{font:600 .66rem/1.3 var(--f-data); letter-spacing:.06em; text-t
     <li><strong>A che punto è</strong> il lavoro: la barra di avanzamento segue la todo list interna di Claude Code.</li>
   </ul>
   <p>In fondo compaiono anche i <strong>limiti d'uso</strong> dell'account, sessione (5 ore) e settimana (7 giorni), con un segno che indica se stai consumando troppo in fretta.</p>
+  <h3>I display</h3>
+  <p>Le stesse tre sessioni (una attende, una lavora a metà della todo list, una ha finito) sui tre profili, più il layout di pausa del TFT.</p>
+  <div class="schermi">
+    <figure><img src="img/screen-tft.png" alt="Display TFT con tre sessioni" loading="lazy"><figcaption>TFT 320×240</figcaption></figure>
+    <figure><img src="img/screen-pausa.png" alt="Display TFT in pausa con la mascotte grande" loading="lazy"><figcaption>TFT in pausa</figcaption></figure>
+    <figure><img src="img/screen-led.png" alt="Matrice LED 64×32" loading="lazy"><figcaption>LED 64×32</figcaption></figure>
+    <figure><img src="img/screen-pixoo.png" alt="Pixoo 64×64" loading="lazy"><figcaption>Pixoo 64×64</figcaption></figure>
+  </div>
 </section>
 
 <section class="capitolo parte-a" id="c2" data-titolo="2. Come funziona" data-parte="a"><h2 data-n="Capitolo 02">Come funziona</h2>
@@ -265,7 +277,7 @@ figure.anim span{font:600 .66rem/1.3 var(--f-data); letter-spacing:.06em; text-t
     <li><strong>Mentre lavora</strong> indossa un costume a seconda del tool: nuvoletta che pensa, terminale (Bash), detective (Read/Grep), pittore (Edit/Write), cowboy (Agent), mago (MCP), giocoliere (todo), meteo (Web).</li>
     <li><strong>Un tool fallito</strong> la fa scuotere con gli occhi a X per 4 secondi.</li>
     <li><strong>In FINITO</strong> festeggia per 10 secondi, poi passeggia con la spunta verde sopra la testa.</li>
-    <li><strong>In PAUSA</strong> alterna una scena ogni 20 secondi (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 minuti si addormenta.</li>
+    <li><strong>In PAUSA</strong> alterna una scena ogni 10 secondi (caffè, passeggiata, cuffie, libro, chitarra) e dopo 30 minuti si addormenta.</li>
     <li><strong>Feste</strong> automatiche per data: Natale, Capodanno, Halloween, San Valentino.</li>
   </ul>
   <p>La mascotte è pixel art 32×32 generata da <code>src/make_sprites.py</code>; si può sostituire mettendo propri PNG in <code>sprites/</code>.</p>
@@ -280,7 +292,7 @@ figure.anim span{font:600 .66rem/1.3 var(--f-data); letter-spacing:.06em; text-t
     <figure class="anim"><div class="sprite" role="img" aria-label="Lavora" style="--n:4;--t:1s;background-image:url(img/anim/working.png)"></div><figcaption><b>Lavora</b><span>arancio</span></figcaption></figure>
     <figure class="anim"><div class="sprite" role="img" aria-label="Attende" style="--n:4;--t:2s;background-image:url(img/anim/waiting.png)"></div><figcaption><b>Attende</b><span>giallo</span></figcaption></figure>
     <figure class="anim"><div class="sprite" role="img" aria-label="Finito" style="--n:6;--t:6s;background-image:url(img/anim/done.png)"></div><figcaption><b>Finito</b><span>verde</span></figcaption></figure>
-    <figure class="anim"><div class="sprite" role="img" aria-label="Pausa" style="--n:3;--t:6s;background-image:url(img/anim/idle.png)"></div><figcaption><b>Pausa</b><span>grigio</span></figcaption></figure>
+    <figure class="anim"><div class="sprite" role="img" aria-label="Dorme" style="--n:3;--t:6s;background-image:url(img/anim/idle.png)"></div><figcaption><b>Dorme</b><span>grigio, dopo 30 min</span></figcaption></figure>
     <figure class="anim"><div class="sprite" role="img" aria-label="Tool fallito" style="--n:4;--t:0.666667s;background-image:url(img/anim/error.png)"></div><figcaption><b>Tool fallito</b><span>4 secondi</span></figcaption></figure>
   </div>
   <h3>I costumi al lavoro</h3>
@@ -296,7 +308,7 @@ figure.anim span{font:600 .66rem/1.3 var(--f-data); letter-spacing:.06em; text-t
     <figure class="anim"><div class="sprite" role="img" aria-label="Meteo" style="--n:4;--t:1s;background-image:url(img/anim/working-web.png)"></div><figcaption><b>Meteo</b><span>Web</span></figcaption></figure>
   </div>
   <h3>Fine lavoro e pausa</h3>
-  <p>Dopo la festa del FINITO passeggia con la spunta; in PAUSA cambia scena ogni 20 secondi.</p>
+  <p>Dopo la festa del FINITO passeggia con la spunta; in PAUSA cambia scena ogni 10 secondi.</p>
   <div class="animazioni">
     <figure class="anim"><div class="sprite" role="img" aria-label="Passeggiata" style="--n:4;--t:1s;background-image:url(img/anim/done-walk.png)"></div><figcaption><b>Passeggiata</b><span>con la spunta</span></figcaption></figure>
     <figure class="anim"><div class="sprite" role="img" aria-label="Caffè" style="--n:4;--t:2s;background-image:url(img/anim/idle-coffee.png)"></div><figcaption><b>Caffè</b><span>pausa</span></figcaption></figure>
