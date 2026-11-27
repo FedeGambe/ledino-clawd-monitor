@@ -29,7 +29,7 @@ import pygame
 
 from render import MASCOT_BODY as BODY
 from render import MASCOT_BODY_IDLE as BODY_IDLE
-from render import PAUSE_SCENES, STATUS_COLOR
+from render import PAUSE_SCENES, STATUS_COLOR, ZOOM_EYES
 from state import DONE, IDLE, WAITING, WORKING
 
 OUT = Path(__file__).resolve().parent.parent / "sprites"
@@ -400,6 +400,9 @@ FRAMES = {
     "wake": [wake(i) for i in range(4)],
     f"{DONE}-walk": [done_walk(i, "right") for i in range(4)],
     f"{DONE}-walk-left": [done_walk(i, "left") for i in range(4)],
+    # Zoom al lavoro: un frame per posizione degli occhi (il monitor li sceglie, non li anima)
+    "zoom": [frame(lambda s, e=e: body(s, eyes=e, mouth="grin" if e == "wink" else "smile"))
+             for e in ZOOM_EYES],
 }
 FRAMES.update({f"{IDLE}-{sc}": [pause_scene(sc, i) for i in range(4)] for sc in PAUSE_SCENES})
 FRAMES.update({f"{WORKING}-{g}": [costume(g, i) for i in range(6 if g == "todo" else 4)] for g in GROUPS})
