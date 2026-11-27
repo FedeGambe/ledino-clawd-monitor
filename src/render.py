@@ -58,7 +58,7 @@ ZOOM_EYE = (24, 22, 22)
 ZOOM_GLOW = (150, 80, 30)  # luce sommata: alone e bagliore al centro
 ZOOM_CENTER_GLOW = 0.3    # forza del bagliore al centro quando è grande (0..1; l'alone resta pieno)
 ZOOM_BREATH_S = 2.0        # periodo del respiro mentre è grande
-ZOOM_GLIDE_S = 0.35        # tempo per far scivolare gli occhi da un lato all'altro
+ZOOM_GLIDE_S = 0.15        # tempo per far scivolare gli occhi da un lato all'altro
 ZOOM_FACE = (0.5, 0.42)    # faccia (11x4 px dello sprite) al massimo: metà larghezza, 42% altezza
 ZOOM_TEXT = (110, 45, 20)  # arancio scuro di repo e limiti sullo sfondo arancio
 
