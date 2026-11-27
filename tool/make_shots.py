@@ -44,3 +44,37 @@ for s in store._sessions.values():
     s.wake_until = 0
 win.set_profile("tft")
 pygame.image.save(win.frame(1.3), os.path.join(root, "docs", "img", "screen-pausa.png"))
+
+
+# Galleria: foglio di frame dello zoom al lavoro (docs/img/anim/zoom.png), 64x64 come un Pixoo.
+# Lo zoom è un effetto del renderer, non uno sprite: lo si disegna frame per frame dal vero _zoom.
+import random
+from pathlib import Path
+from state import WORKING
+FPS, LEAD, TAIL = 12, 1.0, 0.5   # 1 s al lavoro prima, mezzo secondo dopo
+r = render.Renderer("pixoo", render.Mascot(Path(root) / "sprites"))
+r._plan = render.zoom_plan(random.Random(3))
+r.mascot_rect = pygame.Rect(0, 0, 64, 64)
+total = LEAD + 2 * render.ZOOM_GROW_S + sum(d for _, d in r._plan) + TAIL
+n = round(total * FPS)
+sheet = pygame.Surface((64 * n, 64), pygame.SRCALPHA)
+for i in range(n):
+    t = i / FPS
+    # Due passate: su nero (con la luce sommata) e su trasparente (dove c'è qualcosa di pieno)
+    lit, solid = (pygame.Surface((64, 64), pygame.SRCALPHA) for _ in range(2))
+    lit.fill((0, 0, 0, 255))
+    for surf in (lit, solid):
+        r.surface = surf
+        surf.blit(r.mascot.get(WORKING, t, 64), (0, 0))
+        if t >= LEAD:
+            r._zoom(t - LEAD)
+    # Fuori dalle parti piene la luce diventa trasparenza (alone su sfondo trasparente)
+    for y in range(64):
+        for x in range(64):
+            c = lit.get_at((x, y))
+            if solid.get_at((x, y)).a:
+                sheet.set_at((i * 64 + x, y), (c.r, c.g, c.b, 255))
+            elif (a := max(c.r, c.g, c.b)):
+                sheet.set_at((i * 64 + x, y), (c.r * 255 // a, c.g * 255 // a, c.b * 255 // a, a))
+pygame.image.save(sheet, os.path.join(root, "docs", "img", "anim", "zoom.png"))
+print(f"zoom.png: {n} frame, {total:.2f} s")
