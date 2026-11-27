@@ -67,6 +67,33 @@ def icon_frame(state: str, t: float) -> int:
     return int(t * _FPS[state]) % len(icon_frames(state))
 
 
+_hicons: dict[tuple[str, int], int] = {}
+
+
+def set_icon(icon: pystray.Icon, state: str, i: int) -> None:
+    """
+    Cambia il frame dell'icona. Su Windows pystray a ogni cambio scrive un .ico
+    temporaneo e lo ricarica: su disco lento/antivirus il loop si blocca e Windows
+    dà "Non risponde". Qui ogni frame diventa un HICON una volta sola, in memoria.
+    """
+    if sys.platform != "win32":
+        icon.icon = icon_frames(state)[i]
+        return
+    from io import BytesIO
+    from pystray._util import win32  # ponytail: API interna di pystray 0.19
+    h = _hicons.get((state, i))
+    if h is None:
+        buf = BytesIO()
+        icon_frames(state)[i].save(buf, "PNG")
+        data = buf.getvalue()
+        f = ctypes.windll.user32.CreateIconFromResourceEx
+        f.restype = ctypes.c_void_p
+        f.argtypes = [ctypes.c_char_p, ctypes.c_uint, ctypes.c_int, ctypes.c_uint,
+                      ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+        h = _hicons[(state, i)] = f(data, len(data), True, 0x00030000, 0, 0, 0)
+    icon._message(win32.NIM_MODIFY, win32.NIF_ICON, hIcon=h)
+
+
 def work_area() -> tuple[int, int, int, int]:
     """Area dello schermo principale senza la barra delle applicazioni."""
     if sys.platform == "win32":

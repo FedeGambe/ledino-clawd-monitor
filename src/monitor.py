@@ -219,7 +219,8 @@ def main() -> None:
             now = (state, tray.icon_frame(state, time.time() - t0), f"Ledino — {len(sessions)} sessioni")
             # icon.visible: prima che l'icona sia comparsa gli aggiornamenti vanno persi
             if icon.visible and now != shown_icon:
-                icon.icon, icon.title = tray.icon_frames(state)[now[1]], now[2]
+                tray.set_icon(icon, state, now[1])
+                icon.title = now[2]
                 shown_icon = now
             if not visible:
                 clock.tick(5)  # popup nascosto: basta controllare gli eventi
