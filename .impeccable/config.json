@@ -1,0 +1,62 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "italic-serif-display",
+        "value": "*",
+        "files": [
+          "docs/index.html"
+        ],
+        "createdAt": "2026-11-27T08:33:36.167Z",
+        "reason": "Claude: house style of user's crea-pagina-html skill (CSS comment line 8: Georgia titles, mono labels, 3px rules)"
+      },
+      {
+        "rule": "hero-eyebrow-chip",
+        "value": "*",
+        "files": [
+          "docs/index.html"
+        ],
+        "createdAt": "2026-11-27T08:33:37.057Z",
+        "reason": "Claude: house style of user's crea-pagina-html skill (CSS comment line 8: Georgia titles, mono labels, 3px rules)"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "docs/index.html"
+        ],
+        "createdAt": "2026-11-27T08:33:39.705Z",
+        "reason": "Claude: .tabella wraps a table whose cells have 8px 12px padding; flush child is the table itself"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "docs/index.html"
+        ],
+        "createdAt": "2026-11-27T08:33:53.599Z",
+        "reason": "Claude: verified 3 cases: gallery captions on dark figure.anim gradient (>5:1), h1 em 96px large text 3.1:1 (AA 3:1); detector assumed white bg"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "docs/index.html"
+        ],
+        "createdAt": "2026-11-27T08:33:54.180Z",
+        "reason": "Claude: house style of user's crea-pagina-html skill (CSS comment line 8: Georgia titles, mono labels, 3px rules)"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "docs/index.html"
+        ],
+        "createdAt": "2026-11-27T08:33:54.818Z",
+        "reason": "Claude: house style of user's crea-pagina-html skill (CSS comment line 8: Georgia titles, mono labels, 3px rules)"
+      }
+    ]
+  }
+}
