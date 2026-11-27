@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import ctypes
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pygame
@@ -106,6 +108,27 @@ def work_area() -> tuple[int, int, int, int]:
     return 0, 0, w, h - 48  # ponytail: barra stimata a 48 px fuori da Windows
 
 
+wanted = ("idle", "Ledino")  # (stato, tooltip): lo scrive il loop pygame, lo legge _animate
+
+
+def _animate(icon: pystray.Icon) -> None:
+    """
+    Anima l'icona in un thread suo. Shell_NotifyIcon parla con Explorer e può
+    bloccarsi per secondi: se lo chiamasse il loop pygame, il popup andrebbe
+    in "Non risponde".
+    """
+    t0, shown = time.time(), None
+    while True:
+        state, title = wanted
+        now = (state, icon_frame(state, time.time() - t0))
+        # icon.visible: prima che l'icona sia comparsa gli aggiornamenti vanno persi
+        if icon.visible and now != shown:
+            set_icon(icon, *now)
+            icon.title = title  # pystray non fa nulla se non cambia
+            shown = now
+        time.sleep(0.05)
+
+
 def start_icon() -> pystray.Icon:
     def toggle(icon, item):
         pygame.event.post(pygame.event.Event(TOGGLE))
@@ -125,6 +148,7 @@ def start_icon() -> pystray.Icon:
         ),
     )
     icon.run_detached()
+    threading.Thread(target=_animate, args=(icon,), daemon=True).start()
     return icon
 
 

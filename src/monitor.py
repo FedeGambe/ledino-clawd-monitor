@@ -154,7 +154,7 @@ def main() -> None:
     if args.tray:
         import tray  # importa pystray solo se serve
         tray.place_popup()
-        icon, shown_icon, visible = tray.start_icon(), None, True
+        icon, visible = tray.start_icon(), True
         drag = None  # punto del popup afferrato col mouse (trascinamento)
     demo = DemoFeeder(store.apply) if args.demo else None
     if demo:
@@ -215,13 +215,7 @@ def main() -> None:
         if tray:
             # Icona animata con la mascotte dello stato più importante; tooltip col numero di sessioni
             sessions = store.snapshot()
-            state = overall_status(sessions)
-            now = (state, tray.icon_frame(state, time.time() - t0), f"Ledino — {len(sessions)} sessioni")
-            # icon.visible: prima che l'icona sia comparsa gli aggiornamenti vanno persi
-            if icon.visible and now != shown_icon:
-                tray.set_icon(icon, state, now[1])
-                icon.title = now[2]
-                shown_icon = now
+            tray.wanted = (overall_status(sessions), f"Ledino — {len(sessions)} sessioni")
             if not visible:
                 clock.tick(5)  # popup nascosto: basta controllare gli eventi
                 continue
@@ -235,4 +229,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # Con pythonw il traceback non si vede: lo scriviamo su file.
+        # os._exit: il thread di pystray non deve tenere in vita una finestra morta.
+        import traceback
+        with open(HERE.parent / "errori.log", "a", encoding="utf-8") as f:
+            f.write(time.strftime("\n%Y-%m-%d %H:%M:%S\n") + traceback.format_exc())
+        traceback.print_exc()
+        os._exit(1)
