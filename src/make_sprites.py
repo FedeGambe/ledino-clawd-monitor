@@ -401,7 +401,7 @@ FRAMES = {
     f"{DONE}-walk": [done_walk(i, "right") for i in range(4)],
     f"{DONE}-walk-left": [done_walk(i, "left") for i in range(4)],
     # Zoom al lavoro: un frame per posizione degli occhi (il monitor li sceglie, non li anima)
-    "zoom": [frame(lambda s, e=e: body(s, eyes=e, mouth="grin" if e == "wink" else "smile"))
+    "zoom": [frame(lambda s, e=e: body(s, eyes=e, mouth="grin" if e in ("wink", "happy") else "smile"))
              for e in ZOOM_EYES],
 }
 FRAMES.update({f"{IDLE}-{sc}": [pause_scene(sc, i) for i in range(4)] for sc in PAUSE_SCENES})

@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import math
 import os
-import random
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -43,20 +42,22 @@ DONE_CELEBRATE_S = 10     # FINITO: festeggia per 10 s, poi passeggia
 PAUSE_SCENE_S = 10
 SLEEP_AFTER_S = 40 * 60   # dall'ultimo evento: 10 min "finito" + 30 min di scene
 
-# Zoom al lavoro: dopo ZOOM_AFTER_S di LAVORA la mascotte cresce fino a coprire
-# lo schermo, guarda 3 volte a destra e sinistra (con battiti di ciglia e un
-# occhiolino a caso) e torna piccola; poi ogni ZOOM_EVERY_S
+# Zoom al lavoro: dopo ZOOM_AFTER_S di LAVORA la mascotte cresce fino a riempire
+# lo schermo di arancio con la faccia al centro (repo in alto, limiti in basso),
+# si guarda intorno con calma e resta così finché almeno una sessione smette di
+# lavorare; poi torna piccola e, se c'è ancora lavoro, riparte il conto
 ZOOM_AFTER_S = 8
-ZOOM_EVERY_S = 60
 ZOOM_GROW_S = 0.6         # ingrandimento (e uguale per la riduzione)
-ZOOM_EYES = ("open", "left", "right", "closed", "wink")  # frame sprites/zoom_<n>.png
+ZOOM_EYES = ("open", "left", "right", "closed", "wink", "happy")  # frame sprites/zoom_<n>.png
 ZOOM_BODY = (9, 16, 14, 8)  # corpo nello sprite 32x32: x, y, larghezza, altezza
 ZOOM_EYE_X, ZOOM_EYE_Y = (12, 19), 18  # occhi 1x2 nello sprite (vedi body() in make_sprites)
 ZOOM_EYE = (24, 22, 22)
 ZOOM_GLOW = (150, 80, 30)  # luce sommata: alone e bagliore al centro
 ZOOM_CENTER_GLOW = 0.3    # forza del bagliore al centro quando è grande (0..1; l'alone resta pieno)
-ZOOM_BREATH_S = 1.6        # periodo del respiro mentre è grande
-ZOOM_GLIDE_S = 0.3         # tempo per far scivolare gli occhi da un lato all'altro
+ZOOM_BREATH_S = 2.0        # periodo del respiro mentre è grande
+ZOOM_GLIDE_S = 0.35        # tempo per far scivolare gli occhi da un lato all'altro
+ZOOM_FACE = (0.5, 0.42)    # faccia (11x4 px dello sprite) al massimo: metà larghezza, 42% altezza
+ZOOM_TEXT = (110, 45, 20)  # arancio scuro di repo e limiti sullo sfondo arancio
 
 # --- Profili: risoluzione nativa e resa a LED ------------------------------
 PROFILES = {
@@ -203,6 +204,28 @@ def tool_group(tool: str) -> str:
     return TOOL_GROUPS.get(tool, "")
 
 
+# Icone 5x5 del tipo di lavoro, accanto al nome della sessione durante lo zoom
+_ZOOM_ICONS = {
+    "bash":  ["#....", ".#...", "..#..", ".#...", "#.###"],  # prompt >_
+    "read":  [".##..", "#..#.", "#..#.", ".##..", "...##"],  # lente
+    "edit":  ["...##", "..###", ".###.", "###..", "##..."],  # matita
+    "web":   [".###.", "#.#.#", "#####", "#.#.#", ".###."],  # globo
+    "todo":  ["#.###", ".....", "#.###", ".....", "#.###"],  # lista
+    "agent": ["#...#", ".#.#.", "..#..", "..#..", "..#.."],  # bivio: sotto-agente
+    "mcp":   [".#.#.", ".#.#.", "#####", ".###.", "..#.."],  # spina
+    "think": [".###.", "#####", ".###.", ".....", "#...."],  # nuvoletta
+    "":      ["...#.", "..#..", ".####", "..#..", ".#..."],  # fulmine: altri tool
+}
+
+
+def _draw_icon(surf: pygame.Surface, icon: list[str], x: int, y: int, k: int) -> None:
+    """Icona 5x5 con pixel da k x k, nel colore del testo dello zoom."""
+    for dy, line in enumerate(icon):
+        for dx, ch in enumerate(line):
+            if ch == "#":
+                surf.fill(ZOOM_TEXT, (x + dx * k, y + dy * k, k, k))
+
+
 # Mini-mascotte 10x5: stesse proporzioni della grande (corpo largo, braccia
 # in basso, due paia di gambe). # = colore di stato, k = occhi.
 _MINI = [
@@ -306,25 +329,16 @@ def _draw_holiday(img: pygame.Surface, holiday: str, t: float, hat: bool) -> Non
                     img.set_at((10 + dx, y0 + dy), _HOLI[ch])
 
 
-def zoom_plan(rng: random.Random) -> list[tuple[int, float]]:
-    """
-    Sequenza degli occhi durante lo zoom: (indice in ZOOM_EYES, secondi).
-    3 sguardi sinistra-destra lenti, battiti di ciglia sparsi a caso e un
-    occhiolino in un punto a caso.
-    """
-    plan = [(0, 0.6)]
-    sides = (1, 2) if rng.random() < 0.5 else (2, 1)
-    for _ in range(3):
-        for side in sides:
-            plan += [(side, rng.uniform(0.7, 1.1)), (0, rng.uniform(0.2, 0.4))]
-            r = rng.random()
-            if r < 0.3:      # battito
-                plan += [(3, 0.15), (0, 0.25)]
-            elif r < 0.4:    # doppio battito
-                plan += [(3, 0.12), (0, 0.12), (3, 0.12), (0, 0.3)]
-    at = rng.randrange(1, len(plan) + 1)
-    plan[at:at] = [(4, 0.7), (0, 0.3)]
-    return plan
+# Sequenza degli occhi durante lo zoom: (indice in ZOOM_EYES, secondi), ripetuta
+# finché dura. Destra e sinistra scivolando, battito, di nuovo destra e
+# sinistra, occhiolino, risata, da capo.
+ZOOM_PLAN = [
+    (0, 1.2), (2, 1.0), (1, 1.0), (0, 0.8),   # guarda a destra e a sinistra
+    (3, 0.15), (0, 0.8),                      # battito
+    (2, 1.0), (1, 1.0), (0, 0.8),             # di nuovo destra e sinistra
+    (4, 0.7), (0, 0.5),                       # occhiolino
+    (5, 1.2), (0, 0.8),                       # risata
+]
 
 
 def _eyes_at(plan, t: float) -> tuple[int, float]:
@@ -502,6 +516,10 @@ class Renderer:
         self.mascot = mascot
         self.surface = pygame.Surface(self.size)
         self.working_since = 0.0   # inizio del LAVORA corrente (0 = non lavora)
+        self.zoom_t0 = 0.0         # inizio dello zoom in corso (0 = piccola)
+        self.zoom_ids: set[str] = set()  # sessioni al lavoro durante lo zoom
+        self.shrink_at = 0.0       # fine dell'ultimo zoom (per l'animazione di ritorno)
+        self.sessions: list[Session] = []
         if profile == "tft":
             # pygame.font.Font(None, ...) = font di default, sempre disponibile
             self.font_s = pygame.font.Font(None, 15)
@@ -536,38 +554,44 @@ class Renderer:
         festa = os.environ.get("CLAUDE_MONITOR_FESTA", "")
         self.holiday = "" if festa == "off" else festa or holiday_for(date.today())
         getattr(self, f"_draw_{self.profile}")(sessions, overall, t)
-        # Zoom solo nel lavoro "puro": niente errore o risveglio in corso
+        self.sessions = sessions
+        self._zoom_step(sessions, overall, now)
+        return self.surface
+
+    def _zoom_step(self, sessions, overall, now) -> None:
+        """Avvia, tiene e chiude lo zoom; solo nel lavoro "puro" (niente errore o risveglio)."""
+        working = {s.session_id for s in sessions if s.status == WORKING}
+        pure = overall == WORKING and self.variant not in ("error", "wake")
         if overall != WORKING:
             self.working_since = 0.0
         elif not self.working_since:
             self.working_since = now
-        elif self.variant not in ("error", "wake") and now - self.working_since >= ZOOM_AFTER_S:
-            since = now - self.working_since - ZOOM_AFTER_S
-            cycle = int(since // ZOOM_EVERY_S)
-            if getattr(self, "_plan_key", None) != (self.working_since, cycle):
-                # Sequenza casuale nuova a ogni zoom, fissa durante lo zoom
-                self._plan_key = (self.working_since, cycle)
-                self._plan = zoom_plan(random.Random(f"{self.working_since}-{cycle}"))
-            self._zoom(since % ZOOM_EVERY_S)
-        return self.surface
+        if self.zoom_t0 and (not pure or self.zoom_ids - working):
+            # Almeno una sessione ha smesso di lavorare: torna piccola, riparte il conto
+            self.zoom_t0, self.shrink_at = 0.0, now
+            self.working_since = now if overall == WORKING else 0.0
+        if not self.zoom_t0 and pure and self.working_since and now - self.working_since >= ZOOM_AFTER_S:
+            self.zoom_t0, self.zoom_ids = now, set()
+        if self.zoom_t0:
+            self.zoom_ids |= working  # chi parte durante lo zoom conta anche lui
+            p = now - self.zoom_t0
+            self._zoom(min(1.0, p / ZOOM_GROW_S), p - ZOOM_GROW_S if p >= ZOOM_GROW_S else None)
+        elif now - self.shrink_at < ZOOM_GROW_S:
+            self._zoom(1 - (now - self.shrink_at) / ZOOM_GROW_S, None)
 
-    def _zoom(self, p: float) -> None:
-        """Claw'd cresce dal suo posto fino a coprire lo schermo, fa la sequenza di sguardi, poi torna."""
+    def _zoom(self, k: float, t_look: float | None) -> None:
+        """
+        Claw'd a grandezza k (0 = al suo posto, 1 = faccia al centro su schermo
+        arancio); t_look = secondi da quando è arrivato (None mentre cresce o torna).
+        """
         frames = self.mascot.frames.get("zoom")
         if not frames:
             return  # sprite non rigenerati (o robottino segnaposto): niente zoom
-        look = sum(d for _, d in self._plan)
-        t_look = None
-        if p < ZOOM_GROW_S:
-            k = p / ZOOM_GROW_S
-        elif p < ZOOM_GROW_S + look:
-            k, t_look = 1.0, p - ZOOM_GROW_S
-        elif p < 2 * ZOOM_GROW_S + look:
-            k = 1 - (p - ZOOM_GROW_S - look) / ZOOM_GROW_S
-        else:
-            return
-        eyes, shift = _eyes_at(self._plan, t_look) if t_look is not None else (0, 0.0)
-        # Respiro: scala e sobbalzo lenti mentre è grande
+        if t_look is not None:
+            t_look %= sum(d for _, d in ZOOM_PLAN)  # la sequenza si ripete finché dura
+        eyes, shift = _eyes_at(ZOOM_PLAN, t_look) if t_look is not None else (0, 0.0)
+        # Respiro: sobbalzo lento mentre è grande (niente scala: con lo scaling
+        # nearest bocca e occhi cambierebbero di un pixel avanti e indietro)
         breath = math.sin(2 * math.pi * t_look / ZOOM_BREATH_S) if t_look is not None else 0.0
         kp = k * k * (3 - 2 * k)  # posizione: smoothstep, parte e arriva dolce
         ks = _ease_out_back(k)    # scala: supera un po' l'arrivo e rimbalza indietro
@@ -575,15 +599,15 @@ class Renderer:
         bx, by, bw, bh = ZOOM_BODY
         m = self.mascot_rect
         s0 = m.w / 32
-        # Corpo che copre lo schermo, ma non oltre il punto in cui gli occhi (che
-        # guardando di lato occupano 11 px dello sprite) escono dai bordi: sugli
-        # schermi quadrati il resto lo copre lo sfondo arancio qui sotto
-        s1 = min(max(w / bw, h / bh), w / 11)
-        s = (s0 + (s1 - s0) * ks) * (1 + 0.04 * breath)
+        # Faccia (occhi che guardano di lato: 11x4 px dello sprite) dentro ZOOM_FACE
+        # dello schermo, con spazio attorno per repo e limiti; il resto lo copre
+        # lo sfondo arancio qui sotto. Scala intera: ogni pixel dello sprite uguale.
+        s1 = max(1, round(min(w * ZOOM_FACE[0] / 11, h * ZOOM_FACE[1] / 4)))
+        s = s0 + (s1 - s0) * ks
         # Centro del corpo: dalla posizione sul display al centro dello schermo
         c0 = (m.x + (bx + bw / 2) * s0, m.y + (by + bh / 2) * s0)
         cx = c0[0] + (w / 2 - c0[0]) * kp
-        cy = c0[1] + (h / 2 - c0[1]) * kp - 0.4 * s * breath
+        cy = c0[1] + (h / 2 - c0[1]) * kp - 0.25 * s * breath
         # Sfondo arancio: dal riquadro del corpo a tutto lo schermo, solo nell'ultimo
         # 40% dello zoom (prima coprirebbe gambe e braccia ancora piccole)
         kb = max(0.0, (kp - 0.6) / 0.4)
@@ -595,19 +619,59 @@ class Renderer:
         if kb < 1:
             self._add_glow(self._halo(frames[0]), (ox - 8 * s, oy - 8 * s), (48 * s, 48 * s),
                            min(1.0, k * 3) * (1 - kb))
-        # Luce calda al centro che pulsa col respiro, quando lo schermo è arancio
+        # Battito e occhiolino: frame disegnati; occhi aperti: corpo senza occhi +
+        # occhi che scivolano di `shift` pixel dello sprite. Con lo sfondo arancio
+        # niente ombra a terra (riga 27), che resterebbe come una striscia scura.
+        img = frames[eyes] if eyes >= 3 else self._eyeless(frames[0])
+        rows = 27 if kb > 0 else 32
+        self.surface.blit(pygame.transform.scale(img.subsurface((0, 0, 32, rows)), (round(32 * s), round(rows * s))),
+                          (round(ox), round(oy)))
+        if eyes < 3:
+            for ex in ZOOM_EYE_X:
+                pygame.draw.rect(self.surface, ZOOM_EYE, (round(ox + (ex + shift) * s), round(oy + ZOOM_EYE_Y * s),
+                                                          max(1, round(s)), max(1, round(2 * s))))
+        # Luce calda al centro che pulsa col respiro, quando lo schermo è arancio.
+        # Sommata sopra lo sprite: sotto, il corpo pieno la coprirebbe e se ne vedrebbe la sagoma
         if kb > 0:
             self._add_glow(_radial(), (0, 0), (w, h), kb * ZOOM_CENTER_GLOW * (0.65 + 0.35 * breath))
-        if eyes in (3, 4):  # battito e occhiolino: frame disegnati
-            img = pygame.transform.scale(frames[eyes], (round(32 * s), round(32 * s)))
-            self.surface.blit(img, (round(ox), round(oy)))
+        if kb >= 1:
+            self._zoom_text()
+
+    def _zoom_text(self) -> None:
+        """
+        In alto icona del tipo di lavoro + nome della sessione (o repo), todo e
+        altre sessioni al lavoro; in basso 5h e 7g solo in percentuale.
+        """
+        w, h = self.size
+        tft = self.profile == "tft"
+        work = [s for s in self.sessions if s.status == WORKING]
+        if work:
+            s = work[0]
+            done, total = s.progress
+            tail = " ".join(x for x in (f"{done}/{total}" if total else "", f"+{len(work) - 1}" if len(work) > 1 else "") if x)
+            icon = _ZOOM_ICONS.get(tool_group(s.tool) if s.tool else "think", _ZOOM_ICONS[""])
+            name = s.title or s.project
+            if tft:  # icona 15 px + testo, centrati insieme
+                while len(name) > 1 and self.font_m.size(f"{name} {tail}")[0] > w - 40:
+                    name = name[:-2] + "…"
+                img = self.font_m.render(f"{name} {tail}".strip(), True, ZOOM_TEXT)
+                x = (w - 20 - img.get_width()) // 2
+                _draw_icon(self.surface, icon, x, 10, 3)
+                self.surface.blit(img, (x + 20, 11))
+            else:  # icona 5 px + font 3x5: fino a 14 caratteri
+                name = "".join(c for c in name.upper() if c.isalnum() or c == " ").strip()
+                txt = (name[:max(1, 14 - len(tail) - bool(tail))].strip() + " " + tail).strip()
+                x = (w - 7 - tiny_width(txt)) // 2
+                _draw_icon(self.surface, icon, x, 1, 1)
+                tiny_text(self.surface, txt, x + 7, 1, ZOOM_TEXT)
+        lims = [f"{label} {pct:.0f}%" for label, pct, _, _ in self.limits]
+        if tft:
+            for i, txt in enumerate(lims):
+                img = self.font_m.render(txt, True, ZOOM_TEXT)
+                self.surface.blit(img, (14 if i == 0 else w - 14 - img.get_width(), h - 10 - img.get_height()))
             return
-        # Occhi aperti: corpo senza occhi + occhi che scivolano di `shift` pixel dello sprite
-        self.surface.blit(pygame.transform.scale(self._eyeless(frames[0]), (round(32 * s), round(32 * s))),
-                          (round(ox), round(oy)))
-        for ex in ZOOM_EYE_X:
-            pygame.draw.rect(self.surface, ZOOM_EYE, (round(ox + (ex + shift) * s), round(oy + ZOOM_EYE_Y * s),
-                                                      max(1, round(s)), max(1, round(2 * s))))
+        for i, txt in enumerate(lims):
+            tiny_text(self.surface, txt, 1 if i == 0 else w - 1 - tiny_width(txt), h - 6, ZOOM_TEXT)
 
     def _add_glow(self, glow: pygame.Surface, pos, size, intensity: float) -> None:
         """Somma una luce (scalata morbida) allo schermo, con intensità 0..1."""

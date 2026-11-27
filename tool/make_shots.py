@@ -48,14 +48,28 @@ pygame.image.save(win.frame(1.3), os.path.join(root, "docs", "img", "screen-paus
 
 # Galleria: foglio di frame dello zoom al lavoro (docs/img/anim/zoom.png), 64x64 come un Pixoo.
 # Lo zoom è un effetto del renderer, non uno sprite: lo si disegna frame per frame dal vero _zoom.
-import random
 from pathlib import Path
 from state import WORKING
 FPS, LEAD, TAIL = 12, 1.0, 0.5   # 1 s al lavoro prima, mezzo secondo dopo
 r = render.Renderer("pixoo", render.Mascot(Path(root) / "sprites"))
-r._plan = render.zoom_plan(random.Random(3))
 r.mascot_rect = pygame.Rect(0, 0, 64, 64)
-total = LEAD + 2 * render.ZOOM_GROW_S + sum(d for _, d in r._plan) + TAIL
+r.sessions = [s for s in store._sessions.values()][:1]
+for s in r.sessions:
+    s.status, s.tool = WORKING, "Edit"
+r.limits = render.limit_rows(store.limits)
+look = sum(d for _, d in render.ZOOM_PLAN)   # un giro di sguardi, poi una sessione finisce e torna piccola
+total = LEAD + 2 * render.ZOOM_GROW_S + look + TAIL
+
+
+def zoom_at(p):
+    if p < render.ZOOM_GROW_S:
+        r._zoom(p / render.ZOOM_GROW_S, None)
+    elif p < render.ZOOM_GROW_S + look:
+        r._zoom(1.0, p - render.ZOOM_GROW_S)
+    elif p < 2 * render.ZOOM_GROW_S + look:
+        r._zoom(1 - (p - render.ZOOM_GROW_S - look) / render.ZOOM_GROW_S, None)
+
+
 n = round(total * FPS)
 sheet = pygame.Surface((64 * n, 64), pygame.SRCALPHA)
 for i in range(n):
@@ -67,7 +81,7 @@ for i in range(n):
         r.surface = surf
         surf.blit(r.mascot.get(WORKING, t, 64), (0, 0))
         if t >= LEAD:
-            r._zoom(t - LEAD)
+            zoom_at(t - LEAD)
     # Fuori dalle parti piene la luce diventa trasparenza (alone su sfondo trasparente)
     for y in range(64):
         for x in range(64):
