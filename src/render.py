@@ -667,7 +667,7 @@ class Renderer:
         surf = self.surface
         # Barra superiore con titolo e numero di sessioni
         pygame.draw.rect(surf, (22, 26, 34), (0, 0, 320, 20))
-        surf.blit(self.font_m.render("CLAUDE MONITOR", True, FG), (6, 4))
+        surf.blit(self.font_m.render("LEDINO", True, FG), (6, 4))
         n_work = sum(1 for s in sessions if s.status == WORKING)
         n_wait = sum(1 for s in sessions if s.status == WAITING)
         info = f"{len(sessions)} sess · {n_work} lav · {n_wait} att"
